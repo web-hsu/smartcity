@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -22,7 +22,6 @@
   </div>
   <div class="grup-kanan">
     <nav class="nav kanan" id="navKanan" aria-label="Menu bidang (kanan)"></nav>
-    <div class="jam"><div><b id="jam">--:--:--</b><small id="tgl">-</small></div></div>
   </div>
 </header>
 
@@ -44,6 +43,9 @@
   <label><input type="checkbox" id="cbKec" checked> Batas Kecamatan</label>
   <label><input type="checkbox" id="cbLabel" checked> Nama Kecamatan</label>
 </div>
+
+<!-- ============ JAM & TANGGAL (kiri bawah) ============ -->
+<div class="jam"><b id="jam">--:--:--</b><small id="tgl">-</small></div>
 
 <!-- ============ DOCK BAWAH ============ -->
 <nav class="dock" aria-label="Menu peta">
