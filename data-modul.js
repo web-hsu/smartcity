@@ -107,7 +107,10 @@ const DATA = {
       grafik: [{ judul: "Penduduk wiraswasta per kecamatan (jiwa)", labels: KEC, values: WIRAUS },
                { judul: "Koperasi Desa/Kelurahan Merah Putih (KDKMP) per kecamatan, 2025", labels: KEC, values: KDKMP }],
       info: "Terdapat 219 KDKMP, satu di setiap desa/kelurahan (Diskuperindag HSU). Jumlah unit UMKM resmi (NIB, omzet, sektor) menunggu data Dinas Koperasi, UKM dan Perdagangan." },
-    tunggu("Disperindag HSU / PIHPS Nasional", ["Harga beras medium", "Harga cabai rawit", "Harga telur ayam", "Harga ikan haruan"]),
+    { s: "link", sumber: "SP2KP — Sistem Pemantauan Pasar dan Kebutuhan Pokok, Kementerian Perdagangan (sp2kp.kemendag.go.id)",
+      ind: [["Harga beras medium", "—"], ["Harga cabai rawit", "—"], ["Harga telur ayam", "—"], ["Harga minyak goreng", "—"]],
+      link: { url: "https://sp2kp.kemendag.go.id/", teks: "Buka harga komoditas di SP2KP" },
+      info: "Harga pangan resmi dipantau Kemendag melalui SP2KP. Buka tautan lalu pilih Kalimantan Selatan → Hulu Sungai Utara." },
     { s: "ada", peta: 0, sumber: SUMBER_DUK + "; padi: BPS Provinsi Kalsel, Luas Panen, Produktivitas, dan Produksi Padi menurut Kabupaten/Kota 2024",
       ind: [["Petani / peternak", fmtN(19905), "jiwa"], ["Nelayan", fmtN(1739), "jiwa"],
             ["Petani perempuan", "48,2%", fmtN(9602) + " jiwa"], ["Sentra nelayan", "Paminggir", fmtN(1035) + " jiwa (59,5%)"],
@@ -229,3 +232,92 @@ const DATA = {
     tunggu("BPBD HSU", ["Posko siaga", "Jalur evakuasi", "Kapasitas pengungsian", "Armada siaga"])
   ]
 };
+
+// ---------- Harga komoditas HSU (SP2KP Kemendag, diambil langsung dari browser) ----------
+// Kode wilayah: provinsi 63 (Kalimantan Selatan), kab/kota 6308 (Hulu Sungai Utara).
+// Jika API gagal, modul tetap menampilkan tombol ke situs SP2KP (data awal di DATA.ekonomi[1]).
+const SP2KP_API = "https://api-sp2kp.kemendag.go.id/report/api/average-price/generate-perbandingan-harga";
+const tglWIB = off => new Date(Date.now() - off * 864e5).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });   // YYYY-MM-DD
+const tglIndo = t => new Date(t + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+async function ambilHargaSP2KP(tanggal, pembanding) {
+  const fd = new FormData();
+  fd.append("tanggal", tanggal); fd.append("tanggal_pembanding", pembanding);
+  fd.append("kode_provinsi", "63"); fd.append("kode_kab_kota", "6308");
+  const ac = new AbortController(), to = setTimeout(() => ac.abort(), 12000);
+  try {
+    const r = await fetch(SP2KP_API, { method: "POST", body: fd, signal: ac.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    return (j.data || []).filter(x => x && Number(x.harga) > 0);
+  } finally { clearTimeout(to); }
+}
+
+async function muatHargaSP2KP() {
+  try {
+    let rows = [], tgl = null, pem = null;
+    for (let off = 0; off <= 3 && !rows.length; off++) {          // mundur bila harga hari ini belum dilaporkan
+      tgl = tglWIB(off); pem = tglWIB(off + 1);
+      rows = await ambilHargaSP2KP(tgl, pem);
+    }
+    if (!rows.length) return;
+    const unit = x => x.satuan_display || "kg";
+    const ket = x => {
+      const p = Number(x.persen_perubahan) || 0, a = Math.abs(p).toLocaleString("id-ID", { maximumFractionDigits: 2 });
+      return (p > 0 ? "▲ naik " + a + "%" : p < 0 ? "▼ turun " + a + "%" : "= tidak berubah") + " dari " + tglIndo(pem);
+    };
+    const utama = rows.filter(x => /beras medium|cabai rawit|telur|minyak|daging ayam|bawang merah/i.test(x.variant_nama)).slice(0, 6);
+    const pilih = utama.length >= 4 ? utama : rows.slice(0, 6);
+    DATA.ekonomi[1] = {
+      s: "ada", sumber: "SP2KP — Kementerian Perdagangan (sp2kp.kemendag.go.id), harga rata-rata pasar Kab. Hulu Sungai Utara, " + tglIndo(tgl),
+      ind: pilih.map(x => [x.variant_nama + " (per " + unit(x) + ")", "Rp" + fmtN(x.harga), ket(x)]),
+      grafik: [{ judul: "Harga komoditas di HSU, " + tglIndo(tgl) + " (Rp)", labels: rows.map(x => x.variant_nama + " /" + unit(x)), values: rows.map(x => Number(x.harga)) }],
+      info: "Data harian resmi dari SP2KP, diambil otomatis setiap halaman dibuka. " + rows.length + " komoditas tercatat.",
+    };
+    if (typeof gambarPanel === "function") gambarPanel();
+  } catch (e) {
+    console.warn("SP2KP tidak dapat dimuat:", e);                    // tombol ke SP2KP tetap tampil
+  }
+}
+muatHargaSP2KP();
+
+// ---------- Titik panas HSU (NASA FIRMS lewat Apps Script, lihat Kode.gs) ----------
+// Isi dengan URL Web App (…/exec) setelah Kode.gs dideploy. Selama masih kosong, modul tetap berupa tombol ke dashboard.
+const HOTSPOT_API = "https://script.google.com/macros/s/AKfycbxihammB8I5d_8xqCClkGLTFN1MGPIs1KmUnhMNSfXnH07qkljmNqIYVTMGKuY7a81fLA/exec";
+const dalamCincin = (lo, la, r) => { let d = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+  const xi = r[i][0], yi = r[i][1], xj = r[j][0], yj = r[j][1];
+  if ((yi > la) !== (yj > la) && lo < (xj - xi) * (la - yi) / (yj - yi) + xi) d = !d; } return d; };
+
+async function muatHotspot() {
+  if (!HOTSPOT_API || HOTSPOT_API.indexOf("http") !== 0) return;
+  try {
+    const r = await fetch(HOTSPOT_API); if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json(); if (j.error) throw new Error(j.error);
+    const fs = BATAS_HSU_GEOJSON.features.filter(f => f.properties);
+    const kab = fs.filter(f => f.properties.level === "kabupaten")[0].geometry.coordinates;
+    const kecF = fs.filter(f => f.properties.level === "kecamatan");
+    const bulan = [];
+    j.titik.forEach(p => {
+      if (!dalamCincin(p.lo, p.la, kab)) return;                                   // hanya yang di dalam batas HSU
+      const k = kecF.filter(f => dalamCincin(p.lo, p.la, f.geometry.coordinates))[0];
+      p.kec = k ? k.properties.name : null; bulan.push(p);
+    });
+    const hariIni = bulan.filter(p => p.d === j.hariIni);
+    const perKec = arr => KEC.map(n => arr.filter(p => p.kec === n).length);
+    const kBulan = perKec(bulan), maks = Math.max.apply(null, kBulan), iTop = kBulan.indexOf(maks);
+    const hari = [], lbl = [];                                                     // 7 hari terakhir (WIB)
+    for (let o = 6; o >= 0; o--) { const t = tglWIB(o); hari.push(bulan.filter(p => p.d === t).length); lbl.push(t.slice(8) + "/" + t.slice(5, 7)); }
+    DATA.kebencanaan[0] = {
+      s: "ada", peta: 0, sumber: "NASA FIRMS (Fire Information for Resource Management System) — VIIRS S-NPP, NOAA-20, NOAA-21 near real-time; kepercayaan rendah tidak dihitung; satu titik = satu deteksi satelit",
+      ind: [["Hotspot hari ini", fmtN(hariIni.length), "titik, " + tglIndo(j.hariIni)], ["Hotspot bulan ini", fmtN(bulan.length), "titik deteksi sejak tanggal 1"],
+            ["Kecamatan terbanyak", maks > 0 ? KEC[iTop] : "—", maks > 0 ? fmtN(maks) + " titik bulan ini" : "tidak ada deteksi"],
+            ["Pembaruan terakhir", j.diperbarui.slice(11) + " WIB", tglIndo(j.diperbarui.slice(0, 10))]],
+      grafik: [{ judul: "Titik panas per kecamatan, bulan ini (titik)", labels: KEC, values: kBulan },
+               { judul: "Titik panas 7 hari terakhir (titik)", labels: lbl, values: hari, urut: false }],
+      info: "Data satelit diperbarui beberapa kali sehari dan dimuat ulang otomatis tiap 10 menit. Detail patroli dan sebaran per tanggal ada di dashboard Siaga Karhutla: web-hsu.github.io/siagakarhutla"
+    };
+    if (maks === 0) delete DATA.kebencanaan[0].peta;
+    if (typeof gambarPanel === "function") gambarPanel();
+  } catch (e) { console.warn("Hotspot FIRMS tidak dapat dimuat:", e); }
+}
+muatHotspot(); setInterval(muatHotspot, 600000);
