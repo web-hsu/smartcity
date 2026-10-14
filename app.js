@@ -56,7 +56,10 @@ function areaPeta() {
   const atas = r(document.querySelector(".topbar")).bottom + G;
   let bawah = r(document.querySelector(".dock")).top;
   let kiri = 20, kanan = 20;
-  if (!sempit && !tutup) { kiri = r($("panelKiri")).right + G; kanan = W - r($("panelKanan")).left + G; }
+  if (!sempit && !tutup) {
+    const pw = parseFloat(getComputedStyle(document.body).getPropertyValue("--pw")) || 340;
+    kiri = kanan = 14 + pw + G;   // jarak panel ke tepi (14px) + lebar panel + celah
+  }
   if (sempit && !tutup) bawah = Math.min(bawah, r($("panelKiri")).top);
   const leg = $("legPeta");
   if (leg.getClientRects().length) bawah = Math.min(bawah, r(leg).top);   // legenda modul sedang tampil
@@ -208,7 +211,7 @@ function gambarPanel() {
           '<div class="ind"><b>' + BIDANG.length + '</b><span>Bidang Smart City</span></div>' +
         '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas wilayah menurut Pemkab/BPS.</p></section>';
     const kecamatan =
-      '<section class="kartu"><h2 class="kartu-judul">Kecamatan <small>Pilih untuk zoom</small></h2><ul class="daftar">' +
+      '<section class="kartu"><h2 class="kartu-judul">Kecamatan <small>Pilih untuk zoom</small></h2><ul class="daftar dua">' +
         LABEL_KECAMATAN_HSU.slice().sort((a, b) => a.name.localeCompare(b.name)).map(k =>
           '<li><button type="button" data-kec="' + esc(k.name) + '" class="' + (k.name === kecAktif ? "aktif" : "") + '">' +
           ikon("i-pin") + '<span>' + esc(k.name) + '</span></button></li>').join("") +
@@ -218,9 +221,9 @@ function gambarPanel() {
         BIDANG.map(b => '<button type="button" data-bidang="' + b.id + '">' + ikon(b.ikon) + esc(b.nama) + '</button>').join("") +
       '</div><p class="catatan">Pilih salah satu bidang untuk melihat modul, indikator, grafik, dan peta tematik. ' +
         st[0] + ' dari ' + st[1] + ' modul sudah berisi data; sisanya menunggu sambungan data dari OPD terkait.</p></section>';
-    // Desktop: menu bidang di kiri, profil wilayah di kanan. HP: panel kanan disembunyikan, jadi profil ikut di kiri.
+    // Desktop: menu bidang di kiri; profil wilayah + daftar kecamatan di kanan. HP: panel kanan disembunyikan, jadi semuanya di kiri.
     if (sempit) { kiri.innerHTML = profil + kecamatan; kanan.innerHTML = ""; }
-    else { kiri.innerHTML = bidang + kecamatan; kanan.innerHTML = profil; }
+    else { kiri.innerHTML = bidang; kanan.innerHTML = profil + kecamatan; }
     terapkanPeta();
     return;
   }
