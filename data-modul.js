@@ -283,7 +283,7 @@ muatHargaSP2KP();
 
 // ---------- Titik panas HSU (NASA FIRMS lewat Apps Script, lihat Kode.gs) ----------
 // Isi dengan URL Web App (…/exec) setelah Kode.gs dideploy. Selama masih kosong, modul tetap berupa tombol ke dashboard.
-const HOTSPOT_API = "https://script.google.com/macros/s/AKfycbxihammB8I5d_8xqCClkGLTFN1MGPIs1KmUnhMNSfXnH07qkljmNqIYVTMGKuY7a81fLA/exec";
+const HOTSPOT_API = "PASTE_URL_WEB_APP_DI_SINI";
 const dalamCincin = (lo, la, r) => { let d = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
   const xi = r[i][0], yi = r[i][1], xj = r[j][0], yj = r[j][1];
   if ((yi > la) !== (yj > la) && lo < (xj - xi) * (la - yi) / (yj - yi) + xi) d = !d; } return d; };
@@ -321,3 +321,32 @@ async function muatHotspot() {
   } catch (e) { console.warn("Hotspot FIRMS tidak dapat dimuat:", e); }
 }
 muatHotspot(); setInterval(muatHotspot, 600000);
+
+// ---------- Cuaca & kondisi udara per kecamatan (BMKG, lewat Apps Script yang sama: ?d=cuaca) ----------
+async function muatCuaca() {
+  if (!HOTSPOT_API || HOTSPOT_API.indexOf("http") !== 0) return;
+  try {
+    const r = await fetch(HOTSPOT_API + (HOTSPOT_API.indexOf("?") < 0 ? "?" : "&") + "d=cuaca"); if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json(); if (j.error) throw new Error(j.error);
+    const ada = KEC.filter(n => j.kec[n]);                                         // hanya kecamatan yang datanya diterima
+    if (!ada.length) return;
+    const nilai = k => ada.map(n => j.kec[n][k]).filter(v => v !== null && !isNaN(v));
+    const rata = k => { const a = nilai(k); return a.reduce((s, v) => s + v, 0) / a.length; };
+    const vsAda = ada.filter(n => j.kec[n].vs !== null && !isNaN(j.kec[n].vs));
+    const vsMin = vsAda.length ? vsAda.reduce((m, n) => j.kec[n].vs < j.kec[m].vs ? n : m) : null;
+    const g = (judul, k, dec) => ({ judul: judul, labels: ada, values: ada.map(n => j.kec[n][k] || 0), dec: dec });
+    const waktu = j.kec[ada[0]].w || j.diperbarui;
+    const hujan = ada.filter(n => /hujan|petir/i.test(j.kec[n].c || "")).length;
+    DATA.lingkungan[0] = {
+      s: "ada", peta: vsAda.length ? 0 : undefined, sumber: "BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) — Prakiraan Cuaca Terbuka data.bmkg.go.id, desa/kelurahan wakil tiap kecamatan; prakiraan per 3 jam, diperbarui 2 kali sehari",
+      ind: [["Suhu rata-rata", fmtN(rata("t"), 1) + " °C", "rata-rata " + ada.length + " kecamatan"], ["Kelembapan rata-rata", fmtN(rata("hu")) + "%", "prakiraan " + String(waktu).slice(11, 16) + " waktu setempat"],
+            ["Angin rata-rata", fmtN(rata("ws"), 1) + " km/jam", "kecepatan prakiraan"],
+            ["Jarak pandang terendah", vsMin ? j.kec[vsMin].vst + " km" : "—", vsMin || "data jarak pandang belum ada"]],
+      grafik: [g("Jarak pandang per kecamatan (km)", "vs", 1), g("Suhu udara per kecamatan (°C)", "t", 1), g("Kelembapan udara per kecamatan (%)", "hu", 0), g("Kecepatan angin per kecamatan (km/jam)", "ws", 1)],
+      info: (hujan ? hujan + " kecamatan diprakirakan hujan/petir pada jam ini. " : "") + "Ini data cuaca BMKG, bukan indeks kualitas udara (AQI/PM2,5). Nilai AQI terkini tersedia di dashboard Siaga Karhutla: web-hsu.github.io/siagakarhutla"
+    };
+    if (vsAda.length === 0) delete DATA.lingkungan[0].peta;
+    if (typeof gambarPanel === "function") gambarPanel();
+  } catch (e) { console.warn("Cuaca BMKG tidak dapat dimuat:", e); }
+}
+muatCuaca(); setInterval(muatCuaca, 3 * 3600 * 1000);
