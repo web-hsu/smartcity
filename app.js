@@ -61,8 +61,9 @@ function areaPeta() {
     kiri = kanan = 14 + pw + G;   // jarak panel ke tepi (14px) + lebar panel + celah
   }
   if (sempit && !tutup) bawah = Math.min(bawah, r($("panelKiri")).top);
-  const leg = $("legPeta");
-  if (leg.getClientRects().length) bawah = Math.min(bawah, r(leg).top);   // legenda modul sedang tampil
+  // Ruang untuk legenda modul SELALU disisihkan di desktop (tinggi tetap), baik legenda tampil maupun tidak,
+  // sehingga letak peta sama persis di semua menu, modul berdata maupun belum.
+  if (!sempit) bawah -= 120;
   return { tl: [Math.round(kiri), Math.round(atas)], br: [Math.round(kanan), Math.round(Math.max(H - bawah + G, 20))] };
 }
 function opsiPandang(extra) {
@@ -295,7 +296,6 @@ function detailModul(b, i) {
 
 // ---------- Peta tematik (pewarnaan kecamatan mengikuti grafik modul aktif) ----------
 let warnaKec = {};
-let legTampil = false, mapSiap = false;
 function skala(t) {
   const a = [27, 79, 156], c = [39, 211, 255], e = [255, 210, 74];
   const [p, q, u] = t < .5 ? [a, c, t * 2] : [c, e, (t - .5) * 2];
@@ -323,7 +323,6 @@ function terapkanPeta() {
     leg.style.display = "flex";
     leg.innerHTML = '<b>' + esc(g.judul) + '</b><span class="grad"></span><span class="lr"><i>' + fmtN(mn, g.dec) + '</i><i>' + fmtN(mx, g.dec) + '</i></span>';
   } else leg.style.display = "none";
-  if (!!g !== legTampil) { legTampil = !!g; if (mapSiap) sesuaikanPandangan(true); }   // legenda memakan ruang bawah
   gayaSemua();
 }
 
@@ -373,7 +372,6 @@ function init() {
   gambarMenu(); gambarPanel();
   muatLabelKecamatan();
   paskanKabupaten(false);
-  mapSiap = true;
   ketukJam(); setInterval(ketukJam, 1000);
   let sempitLama = window.innerWidth <= 820;
   window.addEventListener("resize", () => { sesuaikanPandangan(false); aturLabelKecamatan(); const s = window.innerWidth <= 820; if (s !== sempitLama) { sempitLama = s; gambarPanel(); } });
