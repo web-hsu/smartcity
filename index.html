@@ -29,7 +29,7 @@
     .map-wrap{position:relative;flex:1 1 auto;min-height:420px}
     #map{position:absolute;inset:0;background:#dfe8e3}
     .kml-kecamatan-label{background:transparent!important;border:0!important;white-space:nowrap;pointer-events:none!important}
-    .kml-kecamatan-label span{display:block;transform:translate(-50%,-50%);color:#fff;font-size:14px;font-weight:700;line-height:1.1;
+    .kml-kecamatan-label span{display:block;transform:translate(-50%,-50%);color:#fff;font-size:13px;font-weight:700;line-height:1.1;
       text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000,0 2px 4px rgba(0,0,0,.75)}
 
     .map-legend{position:absolute;z-index:700;right:12px;bottom:26px;display:flex;flex-direction:column;gap:6px;
@@ -125,19 +125,72 @@ function fitKabupaten() {
   map.fitBounds(bounds, { padding: [20, 20], maxZoom: 13, animate: false });
 }
 
+// Label kecamatan: posisi tetap di pusat kecamatan, tetapi saat berdekatan
+// (mis. Amuntai Selatan - Haur Gading - Amuntai Utara) digeser otomatis
+// secara vertikal supaya tidak saling menimpa. Dihitung ulang tiap zoom.
+const labelKecamatan = [];
+
+// Murni hitungan: items = [{x,y,w,h}] (piksel layar) -> offset [{dx,dy}] tanpa tumpang tindih.
+function susunLabel(items) {
+  const GAP = 3, terpasang = [], hasil = [];
+  const tabrak = (a, b) =>
+    Math.abs(a.x - b.x) < (a.w + b.w) / 2 + GAP && Math.abs(a.y - b.y) < (a.h + b.h) / 2 + GAP;
+  items.forEach(it => {
+    const h = it.h + GAP;
+    // Coba geser sedikit ke segala arah; ambil yang paling dekat dengan posisi asal.
+    const kandidat = [[0, 0]];
+    for (let r = 1; r <= 4; r++) {
+      [-1, 0, 1].forEach(iy => [-2, -1, 0, 1, 2].forEach(ix => {
+        if (iy === 0 && ix === 0) return;
+        kandidat.push([ix * r * 22, iy * r * h]);
+      }));
+    }
+    kandidat.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
+    let pilih = kandidat[0];
+    for (const [dx, dy] of kandidat) {
+      const box = { x: it.x + dx, y: it.y + dy, w: it.w, h: it.h };
+      if (!terpasang.some(t => tabrak(box, t))) { pilih = [dx, dy]; break; }
+    }
+    terpasang.push({ x: it.x + pilih[0], y: it.y + pilih[1], w: it.w, h: it.h });
+    hasil.push({ dx: pilih[0], dy: pilih[1] });
+  });
+  return hasil;
+}
+
+function aturLabelKecamatan() {
+  if (!labelKecamatan.length) return;
+  const kecil = window.matchMedia("(max-width:768px)").matches;
+  const font = kecil ? 11 : 13;
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.font = "700 " + font + "px Arial";
+  const items = labelKecamatan.map(l => {
+    const p = map.latLngToContainerPoint([l.lat, l.lon]);
+    return { x: p.x, y: p.y, w: ctx.measureText(l.name).width + 6, h: font + 4 };
+  });
+  const urut = items.map((_, i) => i).sort((i, j) => items[i].y - items[j].y || items[i].x - items[j].x);
+  const off = susunLabel(urut.map(i => items[i]));
+  urut.forEach((i, k) => {
+    const el = labelKecamatan[i].marker.getElement();
+    if (!el || !el.firstChild) return;
+    el.firstChild.style.fontSize = font + "px";
+    el.firstChild.style.transform = "translate(-50%,-50%) translate(" + off[k].dx + "px," + off[k].dy + "px)";
+  });
+}
+
 function loadLabelKecamatan() {
-  const grup = L.layerGroup();
   LABEL_KECAMATAN_HSU.forEach(item => {
-    L.marker([Number(item.lat), Number(item.lon)], {
+    const marker = L.marker([Number(item.lat), Number(item.lon)], {
       icon: L.divIcon({
         className: "kml-kecamatan-label",
         html: "<span>" + item.name + "</span>",
         iconSize: [1, 1], iconAnchor: [0, 0]
       }),
       interactive: false, keyboard: false, zIndexOffset: 1000
-    }).addTo(grup);
+    }).addTo(map);
+    labelKecamatan.push({ name: item.name, lat: Number(item.lat), lon: Number(item.lon), marker: marker });
   });
-  grup.addTo(map);
+  map.on("zoomend moveend", aturLabelKecamatan);
+  aturLabelKecamatan();
 }
 
 // ---------- Mulai ----------
@@ -148,8 +201,8 @@ function init() {
   loadBatasAdministratif();
   loadLabelKecamatan();
 
-  window.addEventListener("resize", fitKabupaten);
-  setTimeout(fitKabupaten, 300);
+  window.addEventListener("resize", function () { fitKabupaten(); aturLabelKecamatan(); });
+  setTimeout(function () { fitKabupaten(); aturLabelKecamatan(); }, 300);
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
