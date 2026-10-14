@@ -201,16 +201,34 @@ function gambarPanel() {
   if (!bidangAktif) {
     // ===== BERANDA =====
     const st = ringkasStatus();
-    const profil =
-      '<section class="kartu"><h2 class="kartu-judul">Profil Wilayah <small>Ringkasan</small></h2>' +
-        '<div class="ind-row">' +
-          '<div class="ind"><b>' + fmtN(238435) + '</b><span>Penduduk (jiwa)</span></div>' +
-          '<div class="ind"><b>±892,7 km²</b><span>Luas wilayah</span></div>' +
-          '<div class="ind"><b>' + LABEL_KECAMATAN_HSU.length + '</b><span>Kecamatan</span></div>' +
-          '<div class="ind"><b>214 / 5</b><span>Desa / Kelurahan</span></div>' +
-          '<div class="ind"><b>267</b><span>Jiwa per km²</span></div>' +
-          '<div class="ind"><b>' + BIDANG.length + '</b><span>Bidang Smart City</span></div>' +
-        '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas wilayah menurut Pemkab/BPS.</p></section>';
+    const ik = kecAktif ? KEC.indexOf(kecAktif) : -1;
+    const TOTAL_POP = 238435;
+    let profil;
+    if (ik >= 0) {
+      // Kecamatan dipilih: tampilkan profil kecamatan tersebut, bukan kabupaten.
+      const urutPop = POP.slice().sort((x, y) => y - x).indexOf(POP[ik]) + 1;
+      profil =
+        '<section class="kartu"><h2 class="kartu-judul">Profil Kecamatan <small>' + esc(kecAktif) + '</small></h2>' +
+          '<div class="ind-row">' +
+            '<div class="ind"><b>' + fmtN(POP[ik]) + '</b><span>Penduduk (jiwa)</span></div>' +
+            '<div class="ind"><b>±' + fmtN(LUAS[ik], 1) + ' km²</b><span>Luas wilayah</span></div>' +
+            '<div class="ind"><b>' + fmtN(DESA[ik]) + '</b><span>Desa + Kelurahan</span></div>' +
+            '<div class="ind"><b>' + fmtN(KPD[ik]) + '</b><span>Jiwa per km²</span></div>' +
+            '<div class="ind"><b>' + fmtN(POP[ik] / TOTAL_POP * 100, 1) + '%</b><span>Porsi penduduk kabupaten</span></div>' +
+            '<div class="ind"><b>' + urutPop + ' / ' + KEC.length + '</b><span>Peringkat jumlah penduduk</span></div>' +
+          '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas dihitung dari poligon peta; jumlah desa/kelurahan: BPS HSU 2025. Klik kecamatan yang sama lagi untuk kembali ke profil kabupaten.</p></section>';
+    } else {
+      profil =
+        '<section class="kartu"><h2 class="kartu-judul">Profil Wilayah <small>Ringkasan</small></h2>' +
+          '<div class="ind-row">' +
+            '<div class="ind"><b>' + fmtN(238435) + '</b><span>Penduduk (jiwa)</span></div>' +
+            '<div class="ind"><b>±892,7 km²</b><span>Luas wilayah</span></div>' +
+            '<div class="ind"><b>' + LABEL_KECAMATAN_HSU.length + '</b><span>Kecamatan</span></div>' +
+            '<div class="ind"><b>214 / 5</b><span>Desa / Kelurahan</span></div>' +
+            '<div class="ind"><b>267</b><span>Jiwa per km²</span></div>' +
+            '<div class="ind"><b>' + BIDANG.length + '</b><span>Bidang Smart City</span></div>' +
+          '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas wilayah menurut Pemkab/BPS.</p></section>';
+    }
     const kecamatan =
       '<section class="kartu"><h2 class="kartu-judul">Kecamatan <small>Pilih untuk zoom</small></h2><ul class="daftar dua">' +
         LABEL_KECAMATAN_HSU.slice().sort((a, b) => a.name.localeCompare(b.name)).map(k =>
