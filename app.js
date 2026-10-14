@@ -1,3 +1,4 @@
+
 /* ================================================================
  * SMART CITY HSU - KERANGKA TAMPILAN
  * Struktur: Header (menu bidang) | Panel kiri | Peta | Panel kanan | Dock
@@ -10,8 +11,8 @@ const ikon = id => '<svg class="ic"><use href="#' + id + '"/></svg>';
 const $ = id => document.getElementById(id);
 
 // ---------- Peta ----------
+// Tombol zoom (+/−) sengaja tidak dipasang; zoom lewat scroll mouse atau cubit layar.
 const map = L.map("map", { zoomControl: false, preferCanvas: true, zoomSnap: 0.25 }).setView([-2.39, 115.27], 10);
-L.control.zoom({ position: "bottomleft" }).addTo(map);
 
 const PETA_DASAR = {
   standar: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -171,7 +172,7 @@ function gambarPanel() {
   if (!bidangAktif) {
     // ===== BERANDA =====
     const st = ringkasStatus();
-    kiri.innerHTML =
+    const profil =
       '<section class="kartu"><h2 class="kartu-judul">Profil Wilayah <small>Ringkasan</small></h2>' +
         '<div class="ind-row">' +
           '<div class="ind"><b>' + fmtN(238435) + '</b><span>Penduduk (jiwa)</span></div>' +
@@ -180,17 +181,21 @@ function gambarPanel() {
           '<div class="ind"><b>214 / 5</b><span>Desa / Kelurahan</span></div>' +
           '<div class="ind"><b>267</b><span>Jiwa per km²</span></div>' +
           '<div class="ind"><b>' + BIDANG.length + '</b><span>Bidang Smart City</span></div>' +
-        '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas wilayah menurut Pemkab/BPS.</p></section>' +
+        '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas wilayah menurut Pemkab/BPS.</p></section>';
+    const kecamatan =
       '<section class="kartu"><h2 class="kartu-judul">Kecamatan <small>Pilih untuk zoom</small></h2><ul class="daftar">' +
         LABEL_KECAMATAN_HSU.slice().sort((a, b) => a.name.localeCompare(b.name)).map(k =>
           '<li><button type="button" data-kec="' + esc(k.name) + '" class="' + (k.name === kecAktif ? "aktif" : "") + '">' +
           ikon("i-pin") + '<span>' + esc(k.name) + '</span></button></li>').join("") +
       '</ul></section>';
-    kanan.innerHTML =
+    const bidang =
       '<section class="kartu"><h2 class="kartu-judul">Bidang Smart City <small>Menu</small></h2><div class="grid-bidang">' +
         BIDANG.map(b => '<button type="button" data-bidang="' + b.id + '">' + ikon(b.ikon) + esc(b.nama) + '</button>').join("") +
       '</div><p class="catatan">Pilih salah satu bidang untuk melihat modul, indikator, grafik, dan peta tematik. ' +
         st[0] + ' dari ' + st[1] + ' modul sudah berisi data; sisanya menunggu sambungan data dari OPD terkait.</p></section>';
+    // Desktop: menu bidang di kiri, profil wilayah di kanan. HP: panel kanan disembunyikan, jadi profil ikut di kiri.
+    if (sempit) { kiri.innerHTML = profil + kecamatan; kanan.innerHTML = ""; }
+    else { kiri.innerHTML = bidang + kecamatan; kanan.innerHTML = profil; }
     terapkanPeta();
     return;
   }
