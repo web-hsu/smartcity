@@ -1,4 +1,4 @@
-    :root{
+:root{
       --bg:#020b1a; --panel:rgba(4,30,66,.80); --panel2:rgba(8,48,102,.55);
       --line:#1d6fd6; --cyan:#27d3ff; --cyan-soft:rgba(39,211,255,.16);
       --gold1:#ffd24a; --gold2:#f08a00; --txt:#e8f4ff; --muted:#8fb4d9;
@@ -150,8 +150,11 @@
       font-size:12.5px;display:flex;flex-direction:column;gap:5px}
     .legenda span{display:flex;align-items:center;gap:8px}
     .legenda i{display:inline-block;width:26px;height:0}
-    .l-kab{border-top:3px solid var(--cyan)}
-    .l-kec{border-top:2px dashed #7fb6ff}
+    /* sampel garis diberi alas putih agar garis hitam / biru tua tetap terlihat di panel gelap */
+    .legenda i.l-kab,.legenda i.l-kec{position:relative;height:10px;background:#fff;border-radius:2px}
+    .legenda i.l-kab::after,.legenda i.l-kec::after{content:"";position:absolute;left:2px;right:2px;top:50%;transform:translateY(-50%)}
+    .l-kab::after{border-top:2px solid #000}
+    .l-kec::after{border-top:2px dashed #0a2a7a}
 
     /* ================= HP / LAYAR SEMPIT ================= */
     @media(max-width:1760px){
