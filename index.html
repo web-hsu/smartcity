@@ -103,6 +103,39 @@
     .kosong{display:flex;align-items:center;justify-content:center;text-align:center;height:150px;padding:10px;color:var(--muted);font-size:13.5px;line-height:1.4;
       border:1px dashed rgba(143,180,217,.4);background:repeating-linear-gradient(135deg,transparent 0 10px,rgba(29,111,214,.08) 10px 20px)}
 
+
+    /* ================= DATA MODUL (indikator, grafik, peta tematik) ================= */
+    .ind-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ind{padding:8px 10px;background:var(--panel2);border:1px solid rgba(29,111,214,.55);min-width:0}
+    .ind b{display:block;font-size:21px;line-height:1.15;font-weight:700;color:#fff;overflow-wrap:anywhere}
+    .ind span{display:block;font-size:12.5px;color:var(--muted);letter-spacing:.3px;margin-top:2px}
+    .ind em{display:block;font-style:normal;font-size:11px;color:var(--cyan);margin-top:2px;line-height:1.25}
+    .gr-blok + .gr-blok{margin-top:14px;padding-top:12px;border-top:1px solid rgba(29,111,214,.4)}
+    .gr-judul{font-size:13.5px;font-weight:700;color:#cfe6ff;margin:0 0 8px;letter-spacing:.3px}
+    .sorot{font-size:12.5px;color:var(--gold1);margin:-2px 0 8px}
+    .sorot b{color:#fff}
+    .bars{display:flex;flex-direction:column;gap:5px}
+    .bar-row{display:grid;grid-template-columns:104px 1fr 62px;align-items:center;gap:8px;font-size:12.5px}
+    .bar-row.klik{cursor:pointer}
+    .bar-row.klik:hover .bn{color:#fff}
+    .bn{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bt{display:block;height:9px;background:rgba(29,111,214,.22)}
+    .bt i{display:block;height:100%;background:linear-gradient(90deg,#1d6fd6,#27d3ff)}
+    .bv{text-align:right;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+    .bar-row.aktif .bt i{background:linear-gradient(90deg,var(--gold2),var(--gold1))}
+    .bar-row.aktif .bn{color:var(--gold1)}
+    .tag.ada{color:#7dffb0;border-color:rgba(125,255,176,.55)}
+    .tag.link{color:var(--cyan);border-color:rgba(39,211,255,.55)}
+    .sumber{border-top:1px dashed rgba(143,180,217,.3);padding-top:8px}
+    .btn-link{display:inline-block;margin-top:4px;padding:8px 14px;font-weight:700;color:#2a1700;text-decoration:none;background:linear-gradient(180deg,var(--gold1),var(--gold2))}
+    .profil{margin:0;padding-left:18px;font-size:13.5px;line-height:1.45;color:#d6e8ff}
+    .profil li{margin:4px 0}
+    .kosong.kecil{height:auto;padding:14px 10px}
+    #legPeta{display:none;flex-direction:column;gap:4px;width:200px;margin-top:2px;padding-top:7px;border-top:1px solid rgba(29,111,214,.6)}
+    #legPeta .grad{display:block;height:8px;background:linear-gradient(90deg,rgb(27,79,156),rgb(39,211,255),rgb(255,210,74))}
+    #legPeta .lr{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+    #legPeta .lr i{font-style:normal}
+
     /* ================= DOCK BAWAH ================= */
     .dock{position:fixed;z-index:1000;left:50%;bottom:0;transform:translateX(-50%);display:flex;gap:4px;padding:8px 26px 6px;
       background:linear-gradient(180deg,rgba(8,48,102,.92),rgba(3,22,52,.96));border-top:2px solid var(--cyan);
@@ -191,6 +224,7 @@
 <div class="legenda">
   <span><i class="l-kab"></i> Batas Kabupaten</span>
   <span><i class="l-kec"></i> Batas Kecamatan</span>
+  <div id="legPeta"></div>
 </div>
 
 <!-- ============ POPOVER LAYER ============ -->
@@ -278,6 +312,161 @@ const BIDANG = [
       ["Kejadian Bencana", "Riwayat dan dampak"], ["Posko & Jalur Evakuasi", "Lokasi dan rute"] ] }
 ];
 
+// ---------- Data modul ----------
+// Urutan DATA[idBidang][n] mengikuti urutan modul pada BIDANG di atas.
+// s: "ada" (berisi data) | "tunggu" (menunggu data OPD) | "link" (terhubung ke dashboard lain)
+// ind: [label, nilai, keterangan]   grafik: [{judul, labels, values, dec, urut}]   peta: indeks grafik yang mewarnai peta
+const KEC  = ["Danau Panggang","Babirik","Sungai Pandan","Amuntai Selatan","Amuntai Tengah","Amuntai Utara","Banjang","Haur Gading","Paminggir","Sungai Tabukan"];
+const LUAS = [136.1, 82.0, 59.9, 150.0, 77.1, 37.8, 110.6, 39.0, 192.7, 22.2];   // km², dihitung dari poligon batas pada peta
+const POP  = [21548,20598,29324,32177,52441,21732,19165,17413,8495,15542];       // Dukcapil HSU, Semester I 2025
+const SEK_SD  = [2162,2104,3020,3339,5203,2061,1937,1746,838,1574];
+const SEK_SLA = [1126,1101,1464,1672,2747,1050,954,851,449,758];
+const MUDA = [4916,4692,6627,7346,11587,4703,4264,3909,1911,3564];
+const PROD = [15304,14536,20563,22581,37123,15260,13501,12110,6102,10861];
+const TUA  = [1328,1370,2134,2250,3731,1769,1400,1394,482,1117];
+const ANAK = [6395,6158,8611,9574,15229,6150,5537,5049,2527,4594];
+const AKTA = [62.28,62.36,72.50,64.24,60.10,63.90,60.08,61.42,63.43,70.00];
+const IKD  = [1.97,2.75,4.49,5.11,6.07,3.81,3.18,3.43,1.70,3.01];
+const APARAT = [169,261,795,1026,2436,448,332,396,48,152];
+const WIRAUS = [5631,4018,7600,9633,16156,6095,5536,4705,1572,4779];
+const TANI   = [1661,3041,3554,1973,1633,2494,1974,2064,106,1405];
+const NELAYAN= [312,265,15,42,31,5,8,14,1035,12];
+const PELAJAR= [2507,2736,3591,5607,7026,2955,2383,2243,1045,2501];
+const PENGAJAR=[87,59,89,139,275,83,25,70,35,30];
+const NAKES  = [10,11,54,45,112,19,10,19,2,6];
+const DISAB  = [27,73,112,95,219,93,86,63,41,52];
+const KPD  = POP.map((p, i) => Math.round(p / LUAS[i]));
+const RKT  = MUDA.map((m, i) => Math.round((m + TUA[i]) / PROD[i] * 1000) / 10);
+const iPad = KPD.indexOf(Math.max.apply(null, KPD));
+const SUMBER_DUK = "Dukcapil HSU — Buku Data Agregat Kependudukan Semester I 2025";
+const tunggu = (sumber, labels, extra) => Object.assign({ s: "tunggu", ind: labels.map(l => [l, "—"]), sumber: sumber }, extra || {});
+
+const DATA = {
+  pemerintahan: [
+    { s: "ada", peta: 0, sumber: SUMBER_DUK,
+      ind: [["Kepemilikan akta lahir", "63,78%", "dari seluruh penduduk"], ["Kepemilikan KIA", "63,27%", "anak usia 0–17 th"],
+            ["Penduduk ber-KK", "99,53%", "80.782 kepala keluarga"], ["Pengguna IKD", "4,10%", "7.073 akun aktif"]],
+      grafik: [{ judul: "Kepemilikan akta kelahiran per kecamatan (%)", labels: KEC, values: AKTA, dec: 2 },
+               { judul: "Aktivasi Identitas Kependudukan Digital / IKD (%)", labels: KEC, values: IKD, dec: 2 }],
+      info: "Wajib KTP-el: 176.686 jiwa. Konsultasi online Dukcapil HSU lewat WhatsApp 0813-5068-5008." },
+    tunggu("DPMPTSP HSU / OSS-RBA", ["Izin terbit (NIB/OSS)", "Izin dalam proses", "Rata-rata waktu layanan", "Izin terbanyak per sektor"]),
+    tunggu("Kanal pengaduan Pemkab HSU / SP4N-LAPOR!", ["Laporan masuk", "Laporan selesai", "Waktu tanggap rata-rata", "Kategori terbanyak"]),
+    { s: "ada", sumber: "Databoks Katadata (olahan data APBD HSU 2026); Perbup HSU No. 4 Tahun 2026 — angka dapat berubah setelah APBD Perubahan",
+      ind: [["Pendapatan daerah", "Rp1.343,34 M", "anggaran 2026 (turun 9,06%)"], ["Belanja daerah", "Rp1.761,69 M", "anggaran 2026 (turun 2,08%)"],
+            ["Realisasi belanja", "27,68%", "Rp487,69 M s.d. Juni 2026"], ["Transfer ke daerah", "Rp998,29 M", "anggaran 2026 (turun 17,98%)"]],
+      grafik: [{ judul: "Realisasi belanja daerah s.d. Juni 2026 (Rp miliar)", dec: 2,
+                 labels: ["Belanja pegawai", "Belanja barang & jasa", "Belanja lainnya", "Belanja modal"], values: [211.42, 148.51, 103.95, 23.81] }],
+      info: "Belanja modal baru terealisasi Rp23,81 miliar pada semester I." },
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + "; jumlah desa/kelurahan sesuai buku agregat tersebut",
+      ind: [["Kecamatan", "10"], ["Desa", "214"], ["Kelurahan", "5"], ["Aparatur / pejabat negara", fmtN(6063), "tercatat pada KTP"]],
+      grafik: [{ judul: "Penduduk berprofesi aparatur / pejabat negara per kecamatan (jiwa)", labels: KEC, values: APARAT }],
+      info: "Daftar OPD, alamat, dan kontak layanan akan ditambahkan setelah data dari bagian organisasi tersedia." }
+  ],
+  ekonomi: [
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (berdasarkan pekerjaan di KTP, bukan sensus usaha)",
+      ind: [["Wiraswasta tercatat", fmtN(65725), "jiwa"], ["Porsi terhadap penduduk", "27,6%"],
+            ["Wiraswasta perempuan", fmtN(18220), "27,7% dari wiraswasta"], ["Terbanyak", "Amuntai Tengah", fmtN(16156) + " jiwa"]],
+      grafik: [{ judul: "Penduduk wiraswasta per kecamatan (jiwa)", labels: KEC, values: WIRAUS }],
+      info: "Jumlah unit UMKM resmi (NIB, omzet, sektor) menunggu data Dinas Koperasi, UKM dan Perdagangan." },
+    tunggu("Disperindag HSU / PIHPS Nasional", ["Harga beras medium", "Harga cabai rawit", "Harga telur ayam", "Harga ikan haruan"]),
+    { s: "ada", peta: 0, sumber: SUMBER_DUK,
+      ind: [["Petani / peternak", fmtN(19905), "jiwa"], ["Nelayan", fmtN(1739), "jiwa"],
+            ["Petani perempuan", "48,2%", fmtN(9602) + " jiwa"], ["Sentra nelayan", "Paminggir", fmtN(1035) + " jiwa (59,5%)"]],
+      grafik: [{ judul: "Petani / peternak per kecamatan (jiwa)", labels: KEC, values: TANI },
+               { judul: "Nelayan per kecamatan (jiwa)", labels: KEC, values: NELAYAN }],
+      info: "Luas panen, produksi padi lebak, dan produksi perikanan menunggu data Dinas Pertanian dan Dinas Perikanan." },
+    { s: "tunggu", sumber: "Disbudparpora HSU / BPS", ind: [["Destinasi wisata", "—"], ["Kunjungan wisatawan", "—"], ["Hotel & penginapan", "—"], ["Kegiatan budaya", "—"]],
+      profil: ["Candi Agung Amuntai — situs sejarah di Amuntai Tengah", "Itik Alabio — ikon peternakan khas Sungai Pandan",
+               "Kawasan rawa dan danau (Danau Panggang, Paminggir) — kerbau rawa dan kerajinan purun"] },
+    { s: "ada", sumber: "Databoks Katadata (olahan data APBD HSU 2026)",
+      ind: [["Anggaran PAD 2026", "Rp151,85 M", "naik 49,96% dari 2025"], ["Realisasi PAD", "Rp41,34 M", "27,22% s.d. April 2026"],
+            ["Porsi PAD", "11,3%", "dari pendapatan daerah"], ["Ketergantungan transfer", "74,3%", "TKD terhadap pendapatan"]],
+      grafik: [{ judul: "Realisasi PAD s.d. April 2026 (Rp miliar)", dec: 2,
+                 labels: ["Lain-lain PAD yang sah", "Hasil kekayaan daerah dipisahkan", "Pajak daerah", "Retribusi daerah"], values: [19.76, 12.07, 7.18, 2.34] }],
+      info: "Peluang investasi, kawasan potensi, dan data realisasi PMA/PMDN menunggu data DPMPTSP." }
+  ],
+  kependudukan: [
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + "; luas wilayah dari poligon peta (±907 km², BPS: 892,7 km²) sehingga kepadatan bisa sedikit berbeda dari publikasi BPS",
+      ind: [["Total penduduk", fmtN(238435), "jiwa · Semester I 2025"], ["Laki-laki / Perempuan", "119.504 / 118.931", "rasio jenis kelamin 100,5"],
+            ["Kepala keluarga", fmtN(80782), "KK"], ["Terpadat", KEC[iPad], fmtN(KPD[iPad]) + " jiwa/km²"]],
+      grafik: [{ judul: "Jumlah penduduk per kecamatan (jiwa)", labels: KEC, values: POP },
+               { judul: "Kepadatan penduduk per kecamatan (jiwa/km²)", labels: KEC, values: KPD }],
+      info: "Rata-rata kabupaten ±267 jiwa/km². Amuntai Tengah menampung 22% penduduk." },
+    { s: "ada", peta: 0, sumber: SUMBER_DUK,
+      ind: [["Usia muda 0–14 th", fmtN(53519), "22,4% penduduk"], ["Usia produktif 15–64 th", fmtN(167941), "70,4% penduduk"],
+            ["Usia 65 th ke atas", fmtN(16975), "7,1% penduduk"], ["Rasio ketergantungan", "42,0", "per 100 usia produktif"]],
+      grafik: [{ judul: "Rasio ketergantungan per kecamatan", labels: KEC, values: RKT, dec: 1 },
+               { judul: "Komposisi penduduk menurut kelompok umur (jiwa)", labels: ["Usia muda", "Usia produktif", "Usia 65+"], values: [53519, 167941, 16975] }],
+      info: "Rasio ketergantungan tertinggi menandakan kecamatan dengan proporsi anak dan lansia lebih besar." },
+    { s: "ada", peta: 0, sumber: "BPS via Databoks Katadata (kemiskinan 2025); " + SUMBER_DUK + " (disabilitas, lansia)",
+      ind: [["Tingkat kemiskinan", "4,81%", "2025 · terendah 21 tahun"], ["Penyandang disabilitas", fmtN(861), "jiwa tercatat"],
+            ["Disabilitas mental/jiwa", fmtN(506), "kategori terbanyak"], ["Lansia 65 th ke atas", fmtN(16975), "jiwa"]],
+      grafik: [{ judul: "Penyandang disabilitas per kecamatan (jiwa)", labels: KEC, values: DISAB }],
+      info: "Data penerima bantuan sosial (PKH, BPNT, DTSEN) menunggu data Dinas Sosial." },
+    { s: "ada", sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi (TPT) BPS",
+      ind: [["Usia produktif 15–64 th", fmtN(167941), "jiwa"], ["Wiraswasta", fmtN(65725), "jiwa"],
+            ["Pertanian / peternakan", fmtN(19905), "jiwa"], ["Belum / tidak bekerja", fmtN(70358), "termasuk anak & lansia"]],
+      grafik: [{ judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
+                 values: [70358, 65725, 39710, 32594, 19905, 6063, 1739, 1128, 892, 288] }],
+      info: "TPAK, TPT, dan lowongan kerja menunggu data BPS Sakernas dan Dinas Tenaga Kerja." }
+  ],
+  pendidikan: [
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (penduduk menurut kelompok usia sekolah)",
+      ind: [["Usia SD", fmtN(23984), "jiwa"], ["Usia SMP", fmtN(12664), "jiwa"], ["Usia SMA", fmtN(12172), "jiwa"], ["Usia perguruan tinggi", fmtN(24782), "jiwa"]],
+      grafik: [{ judul: "Penduduk usia SD per kecamatan (jiwa)", labels: KEC, values: SEK_SD },
+               { judul: "Penduduk usia SMA per kecamatan (jiwa)", labels: KEC, values: SEK_SLA }],
+      info: "Jumlah dan lokasi satuan pendidikan (SD/SMP/SMA/MA) menunggu data Dapodik atau BPS." },
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (pekerjaan pada KTP: pelajar/mahasiswa dan tenaga pengajar)",
+      ind: [["Pelajar / mahasiswa", fmtN(32594), "jiwa tercatat"], ["Tenaga pengajar", fmtN(892), "jiwa tercatat"],
+            ["Anak usia 0–18 th", fmtN(69824), "jiwa"], ["Pelajar terbanyak", "Amuntai Tengah", fmtN(7026) + " jiwa"]],
+      grafik: [{ judul: "Pelajar / mahasiswa per kecamatan (jiwa)", labels: KEC, values: PELAJAR },
+               { judul: "Tenaga pengajar per kecamatan (jiwa)", labels: KEC, values: PENGAJAR }],
+      info: "Jumlah guru ASN/non-ASN dan rasio guru–murid menunggu data Dinas Pendidikan." },
+    tunggu("Dinas Perpustakaan dan Kearsipan HSU", ["Jumlah koleksi", "Anggota aktif", "Kunjungan per tahun", "Perpustakaan desa"]),
+    tunggu("Dinas Pendidikan / Bagian Kesra HSU", ["Program beasiswa", "Jumlah penerima", "Anggaran", "Jenjang sasaran"])
+  ],
+  kesehatan: [
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + ". Angka tenaga kesehatan hanya yang mencantumkan profesinya di KTP, bukan jumlah resmi SDM kesehatan",
+      ind: [["Penduduk dilayani", fmtN(238435), "jiwa · 10 kecamatan"], ["Tenaga kesehatan (KTP)", fmtN(288), "jiwa tercatat"],
+            ["Lansia 65 th ke atas", fmtN(16975), "sasaran layanan lansia"], ["Anak usia 0–18 th", fmtN(69824), "sasaran layanan anak"]],
+      grafik: [{ judul: "Tenaga kesehatan tercatat per kecamatan (jiwa)", labels: KEC, values: NAKES }],
+      info: "Jumlah dan lokasi puskesmas, puskesmas pembantu, rumah sakit, dan klinik menunggu data Dinas Kesehatan." },
+    tunggu("Dinas Kesehatan HSU (SKDR / SIHA)", ["Kasus DBD", "Kasus TB", "Kasus diare", "Kasus ISPA"]),
+    { s: "ada", sumber: "SSGI 2024 (dikutip ANTARA Kalsel, Wabup HSU); Dukcapil HSU Semester I 2025 (balita)",
+      ind: [["Prevalensi stunting 2024", "36%", "hasil SSGI"], ["Perubahan", "+8 poin", "dari 28% pada 2023"],
+            ["Balita 0–4 tahun", fmtN(13426), "jiwa"], ["Program daerah", "HSU Ceria", "Cegah Stunting Bersama"]],
+      grafik: [{ judul: "Prevalensi stunting HSU menurut SSGI (%)", labels: ["2023", "2024"], values: [28, 36], urut: false }],
+      info: "Angka SSGI berasal dari survei sampel. Prevalensi per kecamatan/puskesmas (e-PPGBM) menunggu data Dinas Kesehatan." },
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (penduduk sasaran posyandu)",
+      ind: [["Balita 0–4 tahun", fmtN(13426), "jiwa"], ["Usia 0–14 tahun", fmtN(53519), "jiwa"],
+            ["Anak usia 0–18 th", fmtN(69824), "jiwa"], ["Lansia 65 th ke atas", fmtN(16975), "jiwa"]],
+      grafik: [{ judul: "Penduduk sasaran: anak usia 0–18 th per kecamatan (jiwa)", labels: KEC, values: ANAK }],
+      info: "Jumlah posyandu, kader, dan cakupan penimbangan menunggu data Dinas Kesehatan." }
+  ],
+  lingkungan: [
+    { s: "link", sumber: "Dashboard Siaga Karhutla & Kualitas Udara HSU", ind: [["Indeks kualitas udara (AQI)", "—"], ["PM2,5", "—"], ["Kategori", "—"], ["Pembaruan terakhir", "—"]],
+      link: { url: "https://web-hsu.github.io/siagakarhutla", teks: "Buka dashboard kualitas udara" },
+      info: "Nilai terkini ditampilkan di dashboard Siaga Karhutla agar selalu mengikuti pembaruan data terbaru." },
+    tunggu("Dinas Lingkungan Hidup HSU", ["Timbulan sampah per hari", "TPS & TPA", "Sampah terangkut (%)", "Bank sampah aktif"]),
+    tunggu("Dinas Lingkungan Hidup / PUPR HSU", ["Luas RTH", "RTH per kapita", "Taman kota", "Hutan kota"]),
+    tunggu("Dinas Lingkungan Hidup HSU", ["Titik pemantauan", "Indeks Kualitas Air", "Parameter melampaui baku mutu", "Pemantauan terakhir"])
+  ],
+  mobilitas: [
+    tunggu("Dinas PUPR HSU", ["Panjang jalan kabupaten", "Kondisi baik (%)", "Jalan rusak (km)", "Jalan nasional/provinsi"]),
+    tunggu("Dinas Perhubungan HSU", ["Rute angkutan", "Armada", "Terminal", "Dermaga / angkutan sungai"]),
+    tunggu("Dinas Perhubungan / Satlantas Polres HSU", ["Kejadian kecelakaan", "Korban", "Titik rawan", "Pelanggaran"]),
+    tunggu("Dinas PUPR HSU", ["Jumlah jembatan", "Kondisi baik (%)", "Panjang total", "Perlu perbaikan"])
+  ],
+  kebencanaan: [
+    { s: "link", sumber: "Dashboard Siaga Karhutla HSU", ind: [["Hotspot hari ini", "—"], ["Hotspot bulan ini", "—"], ["Kecamatan terbanyak", "—"], ["Pembaruan terakhir", "—"]],
+      link: { url: "https://web-hsu.github.io/siagakarhutla", teks: "Buka dashboard Siaga Karhutla" },
+      info: "Sebaran titik panas per kecamatan dan filter tanggal tersedia di dashboard Siaga Karhutla." },
+    tunggu("BPBD HSU", ["Titik genangan", "Tinggi muka air", "Desa terdampak", "Pos pantau aktif"]),
+    tunggu("BPBD HSU", ["Kejadian tahun ini", "Warga terdampak", "Perkiraan kerugian", "Jenis bencana dominan"]),
+    tunggu("BPBD HSU", ["Posko siaga", "Jalur evakuasi", "Kapasitas pengungsian", "Armada siaga"])
+  ]
+};
+
 const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 const ikon = id => '<svg class="ic"><use href="#' + id + '"/></svg>';
 const $ = id => document.getElementById(id);
@@ -317,8 +506,8 @@ const GAYA_KEC = { color: "#7fb6ff", weight: 1.5, opacity: .9, dashArray: "6 4",
 fitur("kecamatan").forEach(f => {
   const p = L.polygon(cincin(f), GAYA_KEC).addTo(lapKecamatan);
   poligonKec[f.properties.name] = p;
-  p.on("mouseover", () => { if (kecAktif !== f.properties.name) p.setStyle({ fillOpacity: .18 }); });
-  p.on("mouseout", () => { if (kecAktif !== f.properties.name) p.setStyle({ fillOpacity: 0 }); });
+  p.on("mouseover", () => { if (kecAktif !== f.properties.name) p.setStyle({ fillOpacity: warnaKec[f.properties.name] ? .75 : .18 }); });
+  p.on("mouseout", () => { if (kecAktif !== f.properties.name) p.setStyle({ fillOpacity: warnaKec[f.properties.name] ? .55 : 0 }); });
   p.on("click", () => pilihKecamatan(f.properties.name));
 });
 lapKecamatan.addTo(map);
@@ -402,8 +591,7 @@ let kecAktif = null;      // nama kecamatan terpilih
 
 function pilihKecamatan(nama) {
   kecAktif = (kecAktif === nama) ? null : nama;
-  Object.keys(poligonKec).forEach(n => poligonKec[n].setStyle(n === kecAktif
-    ? { color: "#ffd24a", weight: 2.5, dashArray: null, fillColor: "#ffd24a", fillOpacity: .15 } : GAYA_KEC));
+  Object.keys(poligonKec).forEach(n => poligonKec[n].setStyle(gayaKec(n)));
   labelKecamatan.forEach(l => { const el = l.marker.getElement(); if (el) el.classList.toggle("aktif", l.name === kecAktif); });
   if (kecAktif) map.flyToBounds(poligonKec[kecAktif].getBounds(), {
     paddingTopLeft: [window.innerWidth <= 820 ? 20 : 372, 100], paddingBottomRight: [window.innerWidth <= 820 ? 20 : 372, 100], maxZoom: 13, duration: .8 });
@@ -444,15 +632,21 @@ function ubinKosong(ikonId, label) {
 
 function gambarPanel() {
   const kiri = $("panelKiri"), kanan = $("panelKanan");
+  const sempit = window.innerWidth <= 820;
 
   if (!bidangAktif) {
     // ===== BERANDA =====
+    const st = ringkasStatus();
     kiri.innerHTML =
       '<section class="kartu"><h2 class="kartu-judul">Profil Wilayah <small>Ringkasan</small></h2>' +
-        '<div class="tile-row">' + 
-          '<div class="tile">' + ikon("i-map") + '<div><b>' + LABEL_KECAMATAN_HSU.length + '</b><span>Kecamatan</span></div></div>' +
-          '<div class="tile">' + ikon("i-layers") + '<div><b>' + BIDANG.length + '</b><span>Bidang Smart City</span></div></div>' +
-        '</div></section>' +
+        '<div class="ind-row">' +
+          '<div class="ind"><b>' + fmtN(238435) + '</b><span>Penduduk (jiwa)</span></div>' +
+          '<div class="ind"><b>±892,7 km²</b><span>Luas wilayah</span></div>' +
+          '<div class="ind"><b>' + LABEL_KECAMATAN_HSU.length + '</b><span>Kecamatan</span></div>' +
+          '<div class="ind"><b>214 / 5</b><span>Desa / Kelurahan</span></div>' +
+          '<div class="ind"><b>267</b><span>Jiwa per km²</span></div>' +
+          '<div class="ind"><b>' + BIDANG.length + '</b><span>Bidang Smart City</span></div>' +
+        '</div><p class="catatan sumber">Sumber: Dukcapil HSU Semester I 2025; luas wilayah menurut Pemkab/BPS.</p></section>' +
       '<section class="kartu"><h2 class="kartu-judul">Kecamatan <small>Pilih untuk zoom</small></h2><ul class="daftar">' +
         LABEL_KECAMATAN_HSU.slice().sort((a, b) => a.name.localeCompare(b.name)).map(k =>
           '<li><button type="button" data-kec="' + esc(k.name) + '" class="' + (k.name === kecAktif ? "aktif" : "") + '">' +
@@ -461,26 +655,107 @@ function gambarPanel() {
     kanan.innerHTML =
       '<section class="kartu"><h2 class="kartu-judul">Bidang Smart City <small>Menu</small></h2><div class="grid-bidang">' +
         BIDANG.map(b => '<button type="button" data-bidang="' + b.id + '">' + ikon(b.ikon) + esc(b.nama) + '</button>').join("") +
-      '</div><p class="catatan">Pilih salah satu bidang untuk melihat modul dan indikatornya. Data akan dihubungkan bertahap.</p></section>';
+      '</div><p class="catatan">Pilih salah satu bidang untuk melihat modul, indikator, grafik, dan peta tematik. ' +
+        st[0] + ' dari ' + st[1] + ' modul sudah berisi data; sisanya menunggu sambungan data dari OPD terkait.</p></section>';
+    terapkanPeta();
     return;
   }
 
   // ===== BIDANG TERPILIH =====
   const b = BIDANG.find(x => x.id === bidangAktif);
+  if (modulAktif === null) modulAktif = 0;
+  const daftarData = DATA[b.id] || [];
+  const nAda = daftarData.filter(d => d && d.s !== "tunggu").length;
   kiri.innerHTML =
     '<section class="kartu"><h2 class="kartu-judul">' + esc(b.nama) + ' <small>Modul</small></h2><ul class="daftar">' +
-      b.modul.map((m, i) =>
-        '<li><button type="button" data-modul="' + i + '" class="' + (i === modulAktif ? "aktif" : "") + '">' + ikon("i-item") +
-        '<span>' + esc(m[0]) + '<span class="ket">' + esc(m[1]) + '</span></span><span class="tag">Segera</span></button></li>').join("") +
-    '</ul><p class="catatan">Modul ditambahkan bertahap seiring data terhubung.</p></section>';
+      b.modul.map((m, i) => {
+        const s = daftarData[i] ? daftarData[i].s : "tunggu";
+        const tag = s === "ada" ? ["ada", "Data"] : s === "link" ? ["link", "Dashboard"] : ["", "Menunggu"];
+        return '<li><button type="button" data-modul="' + i + '" class="' + (i === modulAktif ? "aktif" : "") + '">' + ikon("i-item") +
+          '<span>' + esc(m[0]) + '<span class="ket">' + esc(m[1]) + '</span></span><span class="tag ' + tag[0] + '">' + tag[1] + '</span></button></li>';
+      }).join("") +
+    '</ul><p class="catatan">' + nAda + ' dari ' + b.modul.length + ' modul pada bidang ini sudah berisi data. Klik kecamatan pada peta atau grafik untuk membandingkan.</p></section>';
 
-  const judulModul = modulAktif !== null ? b.modul[modulAktif][0] : b.nama;
-  kanan.innerHTML =
-    '<section class="kartu"><h2 class="kartu-judul">Indikator Utama <small>' + esc(judulModul) + '</small></h2>' +
-      '<div class="tile-row">' + ubinKosong("i-chart", "Indikator 1") + ubinKosong("i-chart", "Indikator 2") +
-      ubinKosong("i-chart", "Indikator 3") + ubinKosong("i-chart", "Indikator 4") + '</div></section>' +
-    '<section class="kartu"><h2 class="kartu-judul">Grafik <small>Tren</small></h2>' +
-      '<div class="kosong">Data belum terhubung.<br>Grafik akan tampil di sini setelah sumber data siap.</div></section>';
+  const detail = detailModul(b, modulAktif);
+  if (sempit) { kiri.innerHTML += detail; kanan.innerHTML = ""; } else kanan.innerHTML = detail;
+  terapkanPeta();
+}
+
+function fmtN(n, d) { return Number(n).toLocaleString("id-ID", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
+
+function ringkasStatus() {
+  let ada = 0, tot = 0;
+  BIDANG.forEach(b => b.modul.forEach((m, i) => { tot++; const d = (DATA[b.id] || [])[i]; if (d && d.s !== "tunggu") ada++; }));
+  return [ada, tot];
+}
+
+function gambarGrafik(g) {
+  const idx = g.labels.map((_, i) => i);
+  const urut = g.urut === false ? idx : idx.slice().sort((a, c) => g.values[c] - g.values[a]);
+  const maks = Math.max.apply(null, g.values) || 1;
+  let sorot = "";
+  const ik = g.labels.indexOf(kecAktif);
+  if (kecAktif && ik >= 0)
+    sorot = '<div class="sorot">' + esc(kecAktif) + ': <b>' + fmtN(g.values[ik], g.dec) + '</b> · peringkat ' + (urut.indexOf(ik) + 1) + ' dari ' + g.labels.length + '</div>';
+  return '<div class="gr-blok"><div class="gr-judul">' + esc(g.judul) + '</div>' + sorot + '<div class="bars">' +
+    urut.map(i => {
+      const nm = g.labels[i], kec = KEC.indexOf(nm) >= 0;
+      return '<div class="bar-row' + (nm === kecAktif ? " aktif" : "") + (kec ? " klik" : "") + '"' + (kec ? ' data-kec="' + esc(nm) + '"' : "") + '>' +
+        '<span class="bn" title="' + esc(nm) + '">' + esc(nm) + '</span>' +
+        '<span class="bt"><i style="width:' + Math.max(2, g.values[i] / maks * 100).toFixed(1) + '%"></i></span>' +
+        '<span class="bv">' + fmtN(g.values[i], g.dec) + '</span></div>';
+    }).join("") + '</div></div>';
+}
+
+function detailModul(b, i) {
+  const d = (DATA[b.id] || [])[i], m = b.modul[i];
+  if (!d) return '<section class="kartu"><h2 class="kartu-judul">Indikator Utama <small>' + esc(m[0]) + '</small></h2><div class="kosong">Data belum tersedia.</div></section>';
+  let h = '<section class="kartu"><h2 class="kartu-judul">Indikator Utama <small>' + esc(m[0]) + '</small></h2><div class="ind-row">' +
+    d.ind.map(x => '<div class="ind"><b>' + esc(x[1]) + '</b><span>' + esc(x[0]) + '</span>' + (x[2] ? '<em>' + esc(x[2]) + '</em>' : "") + '</div>').join("") +
+    '</div>' + (d.info ? '<p class="catatan">' + esc(d.info) + '</p>' : "") + '</section>';
+  if (d.grafik) {
+    h += '<section class="kartu"><h2 class="kartu-judul">Grafik <small>' + (d.peta !== undefined ? "Peta tematik aktif" : "Perbandingan") + '</small></h2>' +
+      d.grafik.map(gambarGrafik).join("") + '<p class="catatan sumber">Sumber: ' + esc(d.sumber) + '</p></section>';
+  } else {
+    h += '<section class="kartu"><h2 class="kartu-judul">Status Data <small>' + (d.s === "link" ? "Dashboard" : "Menunggu") + '</small></h2>';
+    if (d.s === "link") h += '<a class="btn-link" href="' + d.link.url + '" target="_blank" rel="noopener">' + esc(d.link.teks) + ' ↗</a>';
+    else h += '<div class="kosong kecil">Data belum terhubung.<br>Indikator di atas akan terisi setelah data dari OPD tersedia.</div>';
+    if (d.profil) h += '<ul class="profil" style="margin-top:10px">' + d.profil.map(p => '<li>' + esc(p) + '</li>').join("") + '</ul>';
+    h += '<p class="catatan sumber">Sumber data: ' + esc(d.sumber) + '</p></section>';
+  }
+  return h;
+}
+
+// ---------- Peta tematik (pewarnaan kecamatan mengikuti grafik modul aktif) ----------
+let warnaKec = {};
+function skala(t) {
+  const a = [27, 79, 156], c = [39, 211, 255], e = [255, 210, 74];
+  const [p, q, u] = t < .5 ? [a, c, t * 2] : [c, e, (t - .5) * 2];
+  return "rgb(" + p.map((v, k) => Math.round(v + (q[k] - v) * u)).join(",") + ")";
+}
+function gayaKec(n) {
+  if (n === kecAktif) return { color: "#ffd24a", weight: 2.5, dashArray: null, fillColor: "#ffd24a", fillOpacity: .15 };
+  return warnaKec[n] ? Object.assign({}, GAYA_KEC, { fillColor: warnaKec[n], fillOpacity: .55 }) : GAYA_KEC;
+}
+function gayaSemua() {
+  Object.keys(poligonKec).forEach(n => poligonKec[n].setStyle(gayaKec(n)));
+  labelKecamatan.forEach(l => { const el = l.marker.getElement(); if (el) el.classList.toggle("aktif", l.name === kecAktif); });
+}
+function terapkanPeta() {
+  warnaKec = {};
+  const leg = $("legPeta");
+  let g = null;
+  if (bidangAktif && modulAktif !== null) {
+    const b = BIDANG.find(x => x.id === bidangAktif), d = (DATA[b.id] || [])[modulAktif];
+    if (d && d.peta !== undefined && d.grafik) g = d.grafik[d.peta];
+  }
+  if (g) {
+    const mn = Math.min.apply(null, g.values), mx = Math.max.apply(null, g.values);
+    g.labels.forEach((n, i) => { warnaKec[n] = skala(mx === mn ? .5 : (g.values[i] - mn) / (mx - mn)); });
+    leg.style.display = "flex";
+    leg.innerHTML = '<b>' + esc(g.judul) + '</b><span class="grad"></span><span class="lr"><i>' + fmtN(mn, g.dec) + '</i><i>' + fmtN(mx, g.dec) + '</i></span>';
+  } else leg.style.display = "none";
+  gayaSemua();
 }
 
 // ---------- Interaksi ----------
@@ -490,7 +765,7 @@ document.addEventListener("click", e => {
   const kc = e.target.closest("[data-kec]");
   if (kc) { pilihKecamatan(kc.dataset.kec); return; }
   const md = e.target.closest("[data-modul]");
-  if (md) { modulAktif = (modulAktif === Number(md.dataset.modul)) ? null : Number(md.dataset.modul); gambarPanel(); return; }
+  if (md) { modulAktif = Number(md.dataset.modul); gambarPanel(); return; }
   if (!e.target.closest("#popLayer") && !e.target.closest("#dkLayer")) $("popLayer").classList.remove("tampil");
 });
 
@@ -530,7 +805,8 @@ function init() {
   muatLabelKecamatan();
   paskanKabupaten(false);
   ketukJam(); setInterval(ketukJam, 1000);
-  window.addEventListener("resize", () => { paskanKabupaten(false); aturLabelKecamatan(); });
+  let sempitLama = window.innerWidth <= 820;
+  window.addEventListener("resize", () => { paskanKabupaten(false); aturLabelKecamatan(); const s = window.innerWidth <= 820; if (s !== sempitLama) { sempitLama = s; gambarPanel(); } });
   setTimeout(() => { paskanKabupaten(false); aturLabelKecamatan(); }, 300);
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
