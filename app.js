@@ -47,15 +47,39 @@ fitur("kecamatan").forEach(f => {
 });
 lapKecamatan.addTo(map);
 
+// Area peta yang benar-benar kosong = layar dikurangi header, panel kiri/kanan, dock, dan legenda.
+// Diukur langsung dari elemen di layar, sehingga peta selalu tepat di tengah area kosong itu.
+function areaPeta() {
+  const W = window.innerWidth, H = window.innerHeight, G = 16;
+  const sempit = W <= 820, tutup = document.body.classList.contains("panel-tutup");
+  const r = el => el.getBoundingClientRect();
+  const atas = r(document.querySelector(".topbar")).bottom + G;
+  let bawah = r(document.querySelector(".dock")).top;
+  let kiri = 20, kanan = 20;
+  if (!sempit && !tutup) { kiri = r($("panelKiri")).right + G; kanan = W - r($("panelKanan")).left + G; }
+  if (sempit && !tutup) bawah = Math.min(bawah, r($("panelKiri")).top);
+  const leg = $("legPeta");
+  if (leg.getClientRects().length) bawah = Math.min(bawah, r(leg).top);   // legenda modul sedang tampil
+  return { tl: [Math.round(kiri), Math.round(atas)], br: [Math.round(kanan), Math.round(Math.max(H - bawah + G, 20))] };
+}
+function opsiPandang(extra) {
+  const a = areaPeta();
+  return Object.assign({ paddingTopLeft: a.tl, paddingBottomRight: a.br, maxZoom: 13 }, extra);
+}
+
 function paskanKabupaten(animasi) {
   map.invalidateSize({ pan: false });
-  const sempit = window.innerWidth <= 820;
-  const kiri = sempit || document.body.classList.contains("panel-tutup") ? 20 : 372;
-  const kanan = sempit || document.body.classList.contains("panel-tutup") ? 20 : 372;
-  map.fitBounds(batasKabupaten.getBounds(), {
-    paddingTopLeft: [kiri, sempit ? 150 : 90], paddingBottomRight: [kanan, sempit ? 200 : 90],
-    maxZoom: 13, animate: !!animasi
-  });
+  map.fitBounds(batasKabupaten.getBounds(), opsiPandang({ animate: !!animasi }));
+}
+function paskanKecamatan(nama, animasi) {
+  map.invalidateSize({ pan: false });
+  const b = poligonKec[nama].getBounds();
+  if (animasi) map.flyToBounds(b, opsiPandang({ duration: .8 }));
+  else map.fitBounds(b, opsiPandang({ animate: false }));
+}
+// Pulihkan pandangan: kecamatan terpilih jika ada, selain itu seluruh kabupaten.
+function sesuaikanPandangan(animasi) {
+  if (kecAktif) paskanKecamatan(kecAktif, animasi); else paskanKabupaten(animasi);
 }
 
 // ---------- Label kecamatan (diatur otomatis agar tidak saling menimpa) ----------
@@ -128,10 +152,8 @@ function pilihKecamatan(nama) {
   kecAktif = (kecAktif === nama) ? null : nama;
   Object.keys(poligonKec).forEach(n => poligonKec[n].setStyle(gayaKec(n)));
   labelKecamatan.forEach(l => { const el = l.marker.getElement(); if (el) el.classList.toggle("aktif", l.name === kecAktif); });
-  if (kecAktif) map.flyToBounds(poligonKec[kecAktif].getBounds(), {
-    paddingTopLeft: [window.innerWidth <= 820 ? 20 : 372, 100], paddingBottomRight: [window.innerWidth <= 820 ? 20 : 372, 100], maxZoom: 13, duration: .8 });
-  else paskanKabupaten(true);
-  gambarPanel();
+  gambarPanel();   // panel digambar dulu supaya ukuran area peta yang kosong sudah final
+  sesuaikanPandangan(true);
 }
 
 function pilihBidang(id) {
@@ -140,7 +162,10 @@ function pilihBidang(id) {
   gambarMenu();
   gambarPanel();
   $("dkBeranda").classList.toggle("aktif", bidangAktif === null);
-  if (document.body.classList.contains("panel-tutup")) document.body.classList.remove("panel-tutup");
+  if (document.body.classList.contains("panel-tutup")) {
+    document.body.classList.remove("panel-tutup");
+    setTimeout(() => { sesuaikanPandangan(true); aturLabelKecamatan(); }, 320);
+  }
 }
 
 function beranda() {
@@ -267,6 +292,7 @@ function detailModul(b, i) {
 
 // ---------- Peta tematik (pewarnaan kecamatan mengikuti grafik modul aktif) ----------
 let warnaKec = {};
+let legTampil = false, mapSiap = false;
 function skala(t) {
   const a = [27, 79, 156], c = [39, 211, 255], e = [255, 210, 74];
   const [p, q, u] = t < .5 ? [a, c, t * 2] : [c, e, (t - .5) * 2];
@@ -294,6 +320,7 @@ function terapkanPeta() {
     leg.style.display = "flex";
     leg.innerHTML = '<b>' + esc(g.judul) + '</b><span class="grad"></span><span class="lr"><i>' + fmtN(mn, g.dec) + '</i><i>' + fmtN(mx, g.dec) + '</i></span>';
   } else leg.style.display = "none";
+  if (!!g !== legTampil) { legTampil = !!g; if (mapSiap) sesuaikanPandangan(true); }   // legenda memakan ruang bawah
   gayaSemua();
 }
 
@@ -314,7 +341,7 @@ $("dkLayer").addEventListener("click", () => {
 });
 $("dkPanel").addEventListener("click", () => {
   document.body.classList.toggle("panel-tutup");
-  setTimeout(() => { paskanKabupaten(true); aturLabelKecamatan(); }, 320);
+  setTimeout(() => { sesuaikanPandangan(true); aturLabelKecamatan(); }, 320);
 });
 $("dkFull").addEventListener("click", () => {
   try {
@@ -343,9 +370,10 @@ function init() {
   gambarMenu(); gambarPanel();
   muatLabelKecamatan();
   paskanKabupaten(false);
+  mapSiap = true;
   ketukJam(); setInterval(ketukJam, 1000);
   let sempitLama = window.innerWidth <= 820;
-  window.addEventListener("resize", () => { paskanKabupaten(false); aturLabelKecamatan(); const s = window.innerWidth <= 820; if (s !== sempitLama) { sempitLama = s; gambarPanel(); } });
-  setTimeout(() => { paskanKabupaten(false); aturLabelKecamatan(); }, 300);
+  window.addEventListener("resize", () => { sesuaikanPandangan(false); aturLabelKecamatan(); const s = window.innerWidth <= 820; if (s !== sempitLama) { sempitLama = s; gambarPanel(); } });
+  setTimeout(() => { sesuaikanPandangan(false); aturLabelKecamatan(); }, 300);
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
