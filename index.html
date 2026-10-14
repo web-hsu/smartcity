@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart City Hulu Sungai Utara</title>
-  <script src="config.js"></script>
-  <script src="gas-shim.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root{
@@ -41,27 +39,6 @@
     .line-kab{border-top:4px solid #111827}
     .line-kec{border-top:2px dashed #2563eb}
 
-    /* ---------- Kualitas Udara (AQI) ---------- */
-    .aqi-overlay{position:absolute;z-index:750;left:12px;top:12px;width:300px;max-width:calc(100vw - 24px);
-      border-radius:11px;overflow:hidden;box-shadow:var(--shadow);background:rgba(255,255,255,.97);font-size:14px}
-    .aqi-overlay-title{text-align:center;padding:8px 10px 7px;background:#fff;color:var(--green);font-size:14px;font-weight:800;border-bottom:1px solid var(--line)}
-    .aqi-overlay-top{display:flex;align-items:center;gap:10px;padding:11px 13px;transition:background .3s ease;
-      background:linear-gradient(135deg,#cfe8bd,#a9d98e);color:#1f4a12}
-    .aqi-overlay-face{font-size:30px;line-height:1}
-    .aqi-overlay-main{text-align:center;line-height:1}
-    .aqi-overlay-number{font-size:26px;font-weight:800}
-    .aqi-overlay-label{font-size:9px;font-weight:700;opacity:.8;margin-top:3px}
-    .aqi-overlay-kategori{flex:1;font-size:15px;font-weight:800;line-height:1.25}
-    .aqi-overlay-detail{display:flex;flex-wrap:wrap;gap:6px 11px;padding:8px 13px;font-size:12.5px}
-    .aqi-overlay-detail strong{color:#0b6b45}
-    .aqi-overlay-footer{padding:0 13px 8px;font-size:11px;color:#7c8a83}
-    .aqi-baik{background:linear-gradient(135deg,#bfe6a3,#8fd15f);color:#1f4a12}
-    .aqi-sedang{background:linear-gradient(135deg,#ffe9a3,#fbc02d);color:#4a3a05}
-    .aqi-sensitif{background:linear-gradient(135deg,#ffcf9e,#f57c00);color:#fff}
-    .aqi-tidaksehat{background:linear-gradient(135deg,#f5a3a1,#e53935);color:#fff}
-    .aqi-sangattidaksehat{background:linear-gradient(135deg,#cf9fdc,#8e24aa);color:#fff}
-    .aqi-berbahaya{background:linear-gradient(135deg,#a35b63,#6b0f1a);color:#fff}
-
     /* ---------- Footer ---------- */
     .footer{flex:none;background:var(--green-dark);color:#fff;font-size:12px;padding:9px 4%;text-align:center}
 
@@ -69,7 +46,6 @@
       .brand h1{font-size:17px}
       .header-meta{display:none}
       .map-wrap{min-height:480px}
-      .aqi-overlay{width:260px}
       .kml-kecamatan-label span{font-size:11px}
       .map-legend{bottom:20px;font-size:11px}
     }
@@ -96,26 +72,6 @@
 <main class="map-wrap">
   <div id="map" aria-label="Peta Kabupaten Hulu Sungai Utara"></div>
 
-  <!-- Kualitas Udara (AQI) -->
-  <div id="aqiOverlay" class="aqi-overlay">
-    <div class="aqi-overlay-title">Kualitas Udara</div>
-    <div id="aqiTop" class="aqi-overlay-top">
-      <span class="aqi-overlay-face" id="aqiFace">🙂</span>
-      <div class="aqi-overlay-main">
-        <div class="aqi-overlay-number" id="aqiNumber">-</div>
-        <div class="aqi-overlay-label" id="aqiLabel">US AQI</div>
-      </div>
-      <div class="aqi-overlay-kategori" id="aqiKategori">Memuat...</div>
-    </div>
-    <div class="aqi-overlay-detail">
-      <span>Polutan: <strong id="aqiPolutan">-</strong></span>
-      <span>☀️ <strong id="aqiSuhu">-</strong></span>
-      <span>💨 <strong id="aqiAngin">-</strong></span>
-      <span>💧 <strong id="aqiKelembaban">-</strong></span>
-    </div>
-    <div class="aqi-overlay-footer" id="aqiUpdateInfo">Memuat data...</div>
-  </div>
-
   <div class="map-legend">
     <span><i class="line-kab"></i> Batas Kabupaten</span>
     <span><i class="line-kec"></i> Batas Kecamatan</span>
@@ -128,8 +84,7 @@
 <script>
 /* ================================================================
  * SMART CITY HSU
- * 1. Peta  : batas kabupaten, batas kecamatan, label kecamatan
- * 2. Widget: Kualitas Udara (AQI)
+ * Peta: batas kabupaten, batas kecamatan, label kecamatan
  * Untuk menambah layer baru, buat fungsi tambahLayerXxx(map) dan
  * panggil dari init().
  * ================================================================ */
@@ -185,101 +140,6 @@ function loadLabelKecamatan() {
   grup.addTo(map);
 }
 
-// ---------- Kualitas Udara (AQI) ----------
-function formatTanggal(tanggal) {
-  if (!tanggal) return "-";
-  const d = new Date(tanggal + "T00:00:00");
-  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
-}
-
-function kategoriAQIClass(kategori) {
-  switch (kategori) {
-    case "Baik": return "aqi-baik";
-    case "Sedang": return "aqi-sedang";
-    case "Tidak Sehat bagi Kelompok Sensitif": return "aqi-sensitif";
-    case "Tidak Sehat": return "aqi-tidaksehat";
-    case "Sangat Tidak Sehat": return "aqi-sangattidaksehat";
-    case "Berbahaya": return "aqi-berbahaya";
-    default: return "";
-  }
-}
-
-function faceAQI(kategori) {
-  switch (kategori) {
-    case "Baik": return "😀";
-    case "Sedang": return "🙂";
-    case "Tidak Sehat bagi Kelompok Sensitif": return "😕";
-    case "Tidak Sehat": return "😷";
-    case "Sangat Tidak Sehat": return "🤢";
-    case "Berbahaya": return "☠️";
-    default: return "❓";
-  }
-}
-
-// Kolom "Waktu" di Sheet bisa terbaca sebagai Date (epoch 1899): ambil jam saja.
-function formatWaktuAQI(waktu) {
-  if (waktu === null || waktu === undefined || waktu === "") return "";
-  if (waktu instanceof Date) {
-    if (isNaN(waktu.getTime())) return "";
-    return waktu.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  }
-  return String(waktu);
-}
-
-function renderAQI(response) {
-  const infoEl = document.getElementById("aqiUpdateInfo");
-
-  if (!response || response.status !== "success" || !response.latest) {
-    infoEl.innerText = (response && response.message) ? response.message : "Data kualitas udara belum tersedia.";
-    document.getElementById("aqiKategori").innerText = "Data belum tersedia";
-    return;
-  }
-
-  const d = response.latest;
-  document.getElementById("aqiTop").className = "aqi-overlay-top " + kategoriAQIClass(d.kategori);
-  document.getElementById("aqiNumber").innerText = (d.aqi || d.aqi === 0) ? d.aqi : "-";
-  document.getElementById("aqiKategori").innerText = d.kategori || "-";
-  document.getElementById("aqiFace").innerText = faceAQI(d.kategori);
-
-  let nilaiUtama = "";
-  if ((d.polutanUtama === "PM2.5" || d.polutanUtama === "PM25") && d.pm25 != null) nilaiUtama = " " + d.pm25 + "µg/m³";
-  else if (d.polutanUtama === "PM10" && d.pm10 != null) nilaiUtama = " " + d.pm10 + "µg/m³";
-  document.getElementById("aqiPolutan").innerText = (d.polutanUtama || "-") + nilaiUtama;
-
-  document.getElementById("aqiSuhu").innerText = d.suhu != null ? d.suhu + "°C" : "-";
-  document.getElementById("aqiAngin").innerText = d.angin != null ? d.angin + " km/h" : "-";
-  document.getElementById("aqiKelembaban").innerText = d.kelembaban != null ? d.kelembaban + " %" : "-";
-  document.getElementById("aqiLabel").innerText = (d.skala === "ISPU" ? "ISPU" : "US AQI");
-
-  infoEl.innerText = "Update: " + formatTanggal(d.tanggal) + " " + formatWaktuAQI(d.waktu) +
-    (response.stale ? " • bukan data hari ini" : "");
-}
-
-function loadAQIData() {
-  if (typeof google === "undefined" || !google.script || !google.script.run) {
-    document.getElementById("aqiUpdateInfo").innerText = "Mode lokal (tanpa GAS).";
-    return;
-  }
-  google.script.run
-    .withSuccessHandler(renderAQI)
-    .withFailureHandler(function (err) {
-      const msg = err && err.message ? err.message : String(err || "Kesalahan tidak diketahui");
-      document.getElementById("aqiUpdateInfo").innerText = "Gagal memuat data: " + msg;
-    })
-    .getAQIDataFromSheet();
-}
-
-// Minta server memperbarui AQI (ada cooldown di server), lalu muat ulang bila berubah.
-function perbaruiDataSaatDiakses() {
-  if (typeof google === "undefined" || !google.script || !google.script.run) return;
-  google.script.run
-    .withSuccessHandler(function (r) { if (r && r.aqi === "diperbarui") loadAQIData(); })
-    .withFailureHandler(function (err) {
-      console.warn("Pembaruan saat diakses gagal:", err && err.message ? err.message : err);
-    })
-    .perbaruiSaatDiakses();
-}
-
 // ---------- Mulai ----------
 function init() {
   document.getElementById("tanggalHeader").innerText =
@@ -287,10 +147,6 @@ function init() {
 
   loadBatasAdministratif();
   loadLabelKecamatan();
-
-  setTimeout(loadAQIData, 800);
-  setTimeout(perbaruiDataSaatDiakses, 4000);
-  setInterval(loadAQIData, 60 * 60 * 1000);   // segarkan AQI tiap 1 jam
 
   window.addEventListener("resize", fitKabupaten);
   setTimeout(fitKabupaten, 300);
