@@ -283,7 +283,7 @@ muatHargaSP2KP();
 
 // ---------- Titik panas HSU (NASA FIRMS lewat Apps Script, lihat Kode.gs) ----------
 // Isi dengan URL Web App (…/exec) setelah Kode.gs dideploy. Selama masih kosong, modul tetap berupa tombol ke dashboard.
-const HOTSPOT_API = "PASTE_URL_WEB_APP_DI_SINI";
+const HOTSPOT_API = "https://script.google.com/macros/s/AKfycbxihammB8I5d_8xqCClkGLTFN1MGPIs1KmUnhMNSfXnH07qkljmNqIYVTMGKuY7a81fLA/exec";
 const dalamCincin = (lo, la, r) => { let d = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
   const xi = r[i][0], yi = r[i][1], xj = r[j][0], yj = r[j][1];
   if ((yi > la) !== (yj > la) && lo < (xj - xi) * (la - yi) / (yj - yi) + xi) d = !d; } return d; };
