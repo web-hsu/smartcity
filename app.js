@@ -1,4 +1,3 @@
-
 /* ================================================================
  * SMART CITY HSU - KERANGKA TAMPILAN
  * Struktur: Header (menu bidang) | Panel kiri | Peta | Panel kanan | Dock
@@ -15,15 +14,13 @@ const map = L.map("map", { zoomControl: false, preferCanvas: true, zoomSnap: 0.2
 L.control.zoom({ position: "bottomleft" }).addTo(map);
 
 const PETA_DASAR = {
-  gelap: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    { attribution: "&copy; OpenStreetMap, &copy; CARTO", subdomains: "abcd", maxZoom: 19 }),
-  satelit: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { attribution: "Tiles &copy; Esri", maxZoom: 19 }),
   standar: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    { attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 })
+    { attribution: "&copy; OpenStreetMap contributors", maxZoom: 19 }),
+  satelit: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { attribution: "Tiles &copy; Esri", maxZoom: 19 })
 };
-let dasarAktif = "gelap";
-PETA_DASAR.gelap.addTo(map);
+let dasarAktif = "standar";
+PETA_DASAR.standar.addTo(map);
 
 // ---------- Batas wilayah ----------
 // Semua garis batas tertutup, jadi dijadikan poligon agar bisa diisi & diklik.
@@ -32,16 +29,14 @@ const fitur = lv => BATAS_HSU_GEOJSON.features.filter(f => f.properties && f.pro
 
 const lapKabupaten = L.layerGroup();
 fitur("kabupaten").forEach(f => {
-  // lapisan lebar tembus pandang = efek menyala, lalu garis tegas di atasnya
-  L.polygon(cincin(f), { color: "#27d3ff", weight: 9, opacity: .18, fillColor: "#27d3ff", fillOpacity: .06, interactive: false }).addTo(lapKabupaten);
-  L.polygon(cincin(f), { color: "#27d3ff", weight: 3, opacity: 1, fill: false, interactive: false }).addTo(lapKabupaten);
+  L.polygon(cincin(f), { color: "#000", weight: 2, opacity: 1, fill: false, interactive: false }).addTo(lapKabupaten);
 });
 lapKabupaten.addTo(map);
 const batasKabupaten = L.polygon(cincin(fitur("kabupaten")[0]), { stroke: false, fill: false, interactive: false });
 
 const lapKecamatan = L.layerGroup();
 const poligonKec = {};
-const GAYA_KEC = { color: "#7fb6ff", weight: 1.5, opacity: .9, dashArray: "6 4", fillColor: "#27d3ff", fillOpacity: 0 };
+const GAYA_KEC = { color: "#0a2a7a", weight: 1.5, opacity: 1, dashArray: "6 4", fillColor: "#27d3ff", fillOpacity: 0 };
 fitur("kecamatan").forEach(f => {
   const p = L.polygon(cincin(f), GAYA_KEC).addTo(lapKecamatan);
   poligonKec[f.properties.name] = p;
