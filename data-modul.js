@@ -10,8 +10,7 @@ const BIDANG = [
       ["Data Perangkat Daerah", "OPD dan kontak layanan"] ] },
   { id: "ekonomi", nama: "Ekonomi", ikon: "i-eco", sisi: "kiri", modul: [
       ["UMKM & Pelaku Usaha", "Sebaran dan jenis usaha"], ["Pasar & Harga Komoditas", "Harga pangan harian"],
-      ["Pertanian & Perikanan", "Produksi dan lahan"], ["Pariwisata", "Destinasi dan kunjungan"],
-      ["Investasi", "Peluang dan potensi daerah"] ] },
+      ["Pertanian & Perikanan", "Produksi dan lahan"], ["Pariwisata", "Destinasi dan kunjungan"] ] },
   { id: "kependudukan", nama: "Kependudukan", ikon: "i-people", sisi: "kiri", modul: [
       ["Jumlah & Sebaran Penduduk", "Per kecamatan dan desa"], ["Kelompok Umur", "Piramida penduduk"],
       ["Kemiskinan & Bantuan Sosial", "Penerima dan sebaran"], ["Ketenagakerjaan", "Angkatan kerja dan lowongan"] ] },
@@ -68,6 +67,7 @@ const NAKES_ALL = KEC.map((_, i) => TK_DOKTER[i] + TK_SPESIALIS[i] + TK_GIGI[i] 
 const W_CAGAR=[0,1,1,1,0,0,0,0,0,1], W_AGRO=[0,0,0,0,0,0,0,0,2,0], W_KRJN=[0,0,0,1,0,0,0,0,0,0], W_AIR=[0,0,0,8,4,0,0,0,0,0];
 const WISATA = KEC.map((_, i) => W_CAGAR[i] + W_AGRO[i] + W_KRJN[i] + W_AIR[i]);   // objek wisata 2025 (Disporapar)
 const SUMBER_SDHSU = "Satu Data HSU (data.hsu.go.id)";
+const SUMBER_DISDIK = "Dinas Pendidikan HSU — LAKIP, Statistik Pendidikan (disdik-kabhsu.info)";
 const KPD  = POP.map((p, i) => Math.round(p / LUAS[i]));
 const RKT  = MUDA.map((m, i) => Math.round((m + TUA[i]) / PROD[i] * 1000) / 10);
 const iPad = KPD.indexOf(Math.max.apply(null, KPD));
@@ -108,12 +108,13 @@ const DATA = {
                { judul: "Koperasi Desa/Kelurahan Merah Putih (KDKMP) per kecamatan, 2025", labels: KEC, values: KDKMP }],
       info: "Terdapat 219 KDKMP, satu di setiap desa/kelurahan (Diskuperindag HSU). Jumlah unit UMKM resmi (NIB, omzet, sektor) menunggu data Dinas Koperasi, UKM dan Perdagangan." },
     tunggu("Disperindag HSU / PIHPS Nasional", ["Harga beras medium", "Harga cabai rawit", "Harga telur ayam", "Harga ikan haruan"]),
-    { s: "ada", peta: 0, sumber: SUMBER_DUK,
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + "; padi: BPS Provinsi Kalsel, Luas Panen, Produktivitas, dan Produksi Padi menurut Kabupaten/Kota 2024",
       ind: [["Petani / peternak", fmtN(19905), "jiwa"], ["Nelayan", fmtN(1739), "jiwa"],
-            ["Petani perempuan", "48,2%", fmtN(9602) + " jiwa"], ["Sentra nelayan", "Paminggir", fmtN(1035) + " jiwa (59,5%)"]],
+            ["Petani perempuan", "48,2%", fmtN(9602) + " jiwa"], ["Sentra nelayan", "Paminggir", fmtN(1035) + " jiwa (59,5%)"],
+            ["Produksi padi 2024", fmtN(79292.4) + " ton", "gabah kering giling (BPS)"], ["Luas panen padi 2024", fmtN(15162.99) + " ha", "produktivitas 52,29 ku/ha"]],
       grafik: [{ judul: "Petani / peternak per kecamatan (jiwa)", labels: KEC, values: TANI },
                { judul: "Nelayan per kecamatan (jiwa)", labels: KEC, values: NELAYAN }],
-      info: "Luas panen, produksi padi lebak, dan produksi perikanan menunggu data Dinas Pertanian dan Dinas Perikanan." },
+      info: "Produksi dan luas panen padi per kecamatan, serta produksi perikanan, menunggu data Dinas Pertanian dan Dinas Perikanan." },
     { s: "ada", peta: 0, sumber: SUMBER_SDHSU + " — Disporapar HSU, objek wisata menurut kecamatan dan klasifikasi 2025 (Kabupaten HSU Dalam Angka 2026)",
       ind: [["Objek wisata", fmtN(jml(WISATA)), "tercatat 2025"], ["Wisata air", fmtN(jml(W_AIR)), "terbanyak di Amuntai Selatan (8)"],
             ["Cagar budaya", fmtN(jml(W_CAGAR)), "Babirik, Sungai Pandan, Amuntai Selatan, Sungai Tabukan"], ["Agrowisata", fmtN(jml(W_AGRO)), "keduanya di Paminggir"]],
@@ -121,13 +122,7 @@ const DATA = {
                { judul: "Objek wisata menurut klasifikasi, 2025", labels: ["Wisata air", "Cagar budaya", "Agrowisata", "Kerajinan"], values: [jml(W_AIR), jml(W_CAGAR), jml(W_AGRO), jml(W_KRJN)] }],
       info: "Amuntai Selatan memiliki objek terbanyak (10). Data kunjungan wisatawan, hotel, dan agenda budaya menunggu data Disporapar.",
       profil: ["Candi Agung Amuntai — situs sejarah di Amuntai Tengah", "Itik Alabio — ikon peternakan khas Sungai Pandan",
-               "Kawasan rawa dan danau (Danau Panggang, Paminggir) — kerbau rawa dan kerajinan purun"] },
-    { s: "ada", sumber: "Databoks Katadata (olahan data APBD HSU 2026)",
-      ind: [["Anggaran PAD 2026", "Rp151,85 M", "naik 49,96% dari 2025"], ["Realisasi PAD", "Rp41,34 M", "27,22% s.d. April 2026"],
-            ["Porsi PAD", "11,3%", "dari pendapatan daerah"], ["Ketergantungan transfer", "74,3%", "TKD terhadap pendapatan"]],
-      grafik: [{ judul: "Realisasi PAD s.d. April 2026 (Rp miliar)", dec: 2,
-                 labels: ["Lain-lain PAD yang sah", "Hasil kekayaan daerah dipisahkan", "Pajak daerah", "Retribusi daerah"], values: [19.76, 12.07, 7.18, 2.34] }],
-      info: "Peluang investasi, kawasan potensi, dan data realisasi PMA/PMDN menunggu data DPMPTSP." }
+               "Kawasan rawa dan danau (Danau Panggang, Paminggir) — kerbau rawa dan kerajinan purun"] }
   ],
   kependudukan: [
     { s: "ada", peta: 0, sumber: SUMBER_DUK + "; luas wilayah dari poligon peta (±907 km², BPS: 892,7 km²) sehingga kepadatan bisa sedikit berbeda dari publikasi BPS",
@@ -147,25 +142,32 @@ const DATA = {
             ["Disabilitas mental/jiwa", fmtN(506), "kategori terbanyak"], ["Lansia 65 th ke atas", fmtN(16975), "jiwa"]],
       grafik: [{ judul: "Penyandang disabilitas per kecamatan (jiwa)", labels: KEC, values: DISAB }],
       info: "Data penerima bantuan sosial (PKH, BPNT, DTSEN) menunggu data Dinas Sosial." },
-    { s: "ada", sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi (TPT) BPS",
-      ind: [["Usia produktif 15–64 th", fmtN(167941), "jiwa"], ["Wiraswasta", fmtN(65725), "jiwa"],
-            ["Pertanian / peternakan", fmtN(19905), "jiwa"], ["Belum / tidak bekerja", fmtN(70358), "termasuk anak & lansia"]],
-      grafik: [{ judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
-                 values: [70358, 65725, 39710, 32594, 19905, 6063, 1739, 1128, 892, 288] }],
-      info: "TPAK, TPT, dan lowongan kerja menunggu data BPS Sakernas dan Dinas Tenaga Kerja." }
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" (data KTP) mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi. TPT: BPS HSU via " + SUMBER_SDHSU + "; TPAK 2023: BPS (Sakernas, Publikasi IPM HSU 2023)",
+      ind: [["Pengangguran terbuka (TPT)", "3,79%", "2025 · BPS (2024: 3,44%)"], ["Partisipasi angkatan kerja (TPAK)", "75,34%", "2023 · tertinggi di Kalsel"],
+            ["Usia produktif 15–64 th", fmtN(167941), "jiwa"], ["Belum / tidak bekerja", fmtN(70358), "termasuk anak & lansia (data KTP)"]],
+      grafik: [{ judul: "Penduduk usia produktif 15–64 th per kecamatan (jiwa)", labels: KEC, values: PROD },
+               { judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
+                 values: [70358, 65725, 39710, 32594, 19905, 6063, 1739, 1128, 892, 288] },
+               { judul: "Tingkat pengangguran terbuka / TPT (%)", labels: ["2021", "2022", "2023", "2024", "2025"], values: [4.80, 4.64, 3.85, 3.44, 3.79], dec: 2, urut: false }],
+      info: "TPT 2025 naik tipis dari 2024 (3,44%) namun jauh di bawah 2021 (4,80%). TPAK terbaru yang tersedia adalah 2023; lowongan kerja dan TPAK terbaru menunggu data BPS Sakernas dan Dinas Tenaga Kerja." }
   ],
   pendidikan: [
-    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (penduduk menurut kelompok usia sekolah)",
-      ind: [["Usia SD", fmtN(23984), "jiwa"], ["Usia SMP", fmtN(12664), "jiwa"], ["Usia SMA", fmtN(12172), "jiwa"], ["Usia perguruan tinggi", fmtN(24782), "jiwa"]],
+    { s: "ada", peta: 0, sumber: SUMBER_DISDIK + " (jumlah sekolah dan fasilitas); " + SUMBER_DUK + " (penduduk usia sekolah per kecamatan)",
+      ind: [["SD / MI", "185 / 81", "sekolah"], ["SMP / MTs", "30 / 32", "sekolah"], ["TK / RA", "141 / 65", "lembaga"], ["PAUD", "141", "lembaga"]],
       grafik: [{ judul: "Penduduk usia SD per kecamatan (jiwa)", labels: KEC, values: SEK_SD },
-               { judul: "Penduduk usia SMA per kecamatan (jiwa)", labels: KEC, values: SEK_SLA }],
-      info: "Jumlah dan lokasi satuan pendidikan (SD/SMP/SMA/MA) menunggu data Dapodik atau BPS." },
-    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (pekerjaan pada KTP: pelajar/mahasiswa dan tenaga pengajar)",
-      ind: [["Pelajar / mahasiswa", fmtN(32594), "jiwa tercatat"], ["Tenaga pengajar", fmtN(892), "jiwa tercatat"],
+               { judul: "Penduduk usia SMA per kecamatan (jiwa)", labels: KEC, values: SEK_SLA },
+               { judul: "Jumlah satuan pendidikan menurut jenjang", labels: ["SD", "PAUD", "TK", "MI", "RA", "MTs", "SMP"], values: [185, 141, 141, 81, 65, 32, 30] },
+               { judul: "Sekolah yang memiliki fasilitas (%)", labels: ["Perpustakaan SMP", "Perpustakaan SD", "Laboratorium SMP", "Laboratorium SD"], values: [98, 69, 32, 4], dec: 0 }],
+      info: "Ruang kelas: 1.206 (SD) dan 178 (SMP). Penduduk usia sekolah (Dukcapil): SD 23.984, SMP 12.664, SMA 12.172 jiwa. Peta lokasi tiap sekolah tersedia di situs Dinas Pendidikan." },
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (pekerjaan pada KTP: pelajar/mahasiswa dan tenaga pengajar); " + SUMBER_DISDIK + " (mutu pendidikan dan guru)",
+      ind: [["Pelajar / mahasiswa", fmtN(32594), "jiwa tercatat (KTP)"], ["Tenaga pengajar", fmtN(892), "jiwa tercatat (KTP)"],
+            ["Asesmen Nasional", "7,40 / 7,20", "rata-rata skor SD / SMP"], ["Guru bersertifikat pendidik", "62,4% / 56,8%", "SD / SMP"],
             ["Anak usia 0–18 th", fmtN(69824), "jiwa"], ["Pelajar terbanyak", "Amuntai Tengah", fmtN(7026) + " jiwa"]],
       grafik: [{ judul: "Pelajar / mahasiswa per kecamatan (jiwa)", labels: KEC, values: PELAJAR },
-               { judul: "Tenaga pengajar per kecamatan (jiwa)", labels: KEC, values: PENGAJAR }],
-      info: "Jumlah guru ASN/non-ASN dan rasio guru–murid menunggu data Dinas Pendidikan." },
+               { judul: "Tenaga pengajar per kecamatan (jiwa)", labels: KEC, values: PENGAJAR },
+               { judul: "Kualitas guru SD (%)", labels: ["Ikut peningkatan kompetensi", "Bersertifikat pendidik", "Berkualifikasi S1/D4"], values: [75.00, 62.37, 22.75], dec: 2 },
+               { judul: "Kualitas guru SMP (%)", labels: ["Berkualifikasi S1/D4", "Ikut peningkatan kompetensi", "Bersertifikat pendidik"], values: [85.50, 69.00, 56.78], dec: 2 }],
+      info: "Angka kelulusan 100% (SD) dan 95% (SMP); rasio guru/kelas/siswa 1:29 (SD) dan 1:31 (SMP). Jumlah guru ASN/non-ASN dan murid per sekolah menunggu data Dinas Pendidikan." },
     { s: "ada", sumber: SUMBER_SDHSU + " — Dinas Perpustakaan dan Kearsipan HSU: pengunjung 2023–2025, koleksi buku 2024 (10 klasifikasi), dan IPLM 2023–2025",
       ind: [["Pengunjung perpustakaan daerah", fmtN(29831), "2025 · relatif sama dengan 2024 (29.853)"], ["Pengunjung mahasiswa", fmtN(19599), "65,7% dari seluruh pengunjung 2025"],
             ["Koleksi buku", fmtN(43070), "eksemplar · " + fmtN(20373) + " judul (2024)"], ["IPLM 2025", "13,46", "metodologi baru; 2024: 80,60"]],
