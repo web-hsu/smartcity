@@ -347,6 +347,13 @@ async function muatCuaca() {
     };
     if (vsAda.length === 0) delete DATA.lingkungan[0].peta;
     if (typeof gambarPanel === "function") gambarPanel();
-  } catch (e) { console.warn("Cuaca BMKG tidak dapat dimuat:", e); }
+  } catch (e) {
+    console.warn("Cuaca BMKG tidak dapat dimuat:", e);
+    const d = DATA.lingkungan[0];                                                 // tampilkan penyebabnya di panel agar mudah dilacak
+    if (d && d.s === "link" && String(d.info).indexOf("Data BMKG belum") !== 0) {
+      d.info = "Data BMKG belum dapat dimuat (" + (e && e.message ? e.message : e) + "). " + d.info;
+      if (typeof gambarPanel === "function") gambarPanel();
+    }
+  }
 }
 muatCuaca(); setInterval(muatCuaca, 3 * 3600 * 1000);
