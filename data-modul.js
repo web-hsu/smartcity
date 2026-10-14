@@ -55,6 +55,19 @@ const PELAJAR= [2507,2736,3591,5607,7026,2955,2383,2243,1045,2501];
 const PENGAJAR=[87,59,89,139,275,83,25,70,35,30];
 const NAKES  = [10,11,54,45,112,19,10,19,2,6];
 const DISAB  = [27,73,112,95,219,93,86,63,41,52];
+// --- Satu Data HSU (data.hsu.go.id), urutan kecamatan = KEC ---
+const DESA   = [16,23,33,30,29,26,20,18,7,17];       // desa+kelurahan per kecamatan, 2025 (BPS HSU)
+const KDKMP  = [16,23,33,30,29,26,20,18,7,17];       // Koperasi Desa/Kelurahan Merah Putih, 2025 (Diskuperindag)
+const PKM    = [1,1,1,1,2,2,1,1,2,1];                // Puskesmas, 2025 (Dinkes)
+const TK_DOKTER=[5,2,8,2,6,2,1,2,3,1], TK_SPESIALIS=[0,0,0,0,21,0,0,0,0,0], TK_GIGI=[1,1,2,1,2,2,1,1,2,1];
+const TK_PERAWAT=[14,18,37,18,25,21,14,15,22,19], TK_BIDAN=[16,22,44,35,33,24,22,18,20,17];
+const TK_KESMAS=[5,3,9,4,6,6,4,3,5,4], TK_KESLING=[3,3,3,4,3,4,2,5,5,2], TK_GIZI=[6,6,9,7,7,8,4,5,7,6];
+const TK_FARMASI=[4,5,6,2,7,4,5,3,9,4], TK_ATLM=[4,4,7,4,6,4,2,2,4,3];
+const jml = a => a.reduce((s, v) => s + v, 0);
+const NAKES_ALL = KEC.map((_, i) => TK_DOKTER[i] + TK_SPESIALIS[i] + TK_GIGI[i] + TK_PERAWAT[i] + TK_BIDAN[i] + TK_KESMAS[i] + TK_KESLING[i] + TK_GIZI[i] + TK_FARMASI[i] + TK_ATLM[i]);
+const W_CAGAR=[0,1,1,1,0,0,0,0,0,1], W_AGRO=[0,0,0,0,0,0,0,0,2,0], W_KRJN=[0,0,0,1,0,0,0,0,0,0], W_AIR=[0,0,0,8,4,0,0,0,0,0];
+const WISATA = KEC.map((_, i) => W_CAGAR[i] + W_AGRO[i] + W_KRJN[i] + W_AIR[i]);   // objek wisata 2025 (Disporapar)
+const SUMBER_SDHSU = "Satu Data HSU (data.hsu.go.id)";
 const KPD  = POP.map((p, i) => Math.round(p / LUAS[i]));
 const RKT  = MUDA.map((m, i) => Math.round((m + TUA[i]) / PROD[i] * 1000) / 10);
 const iPad = KPD.indexOf(Math.max.apply(null, KPD));
@@ -70,24 +83,30 @@ const DATA = {
                { judul: "Aktivasi Identitas Kependudukan Digital / IKD (%)", labels: KEC, values: IKD, dec: 2 }],
       info: "Wajib KTP-el: 176.686 jiwa. Konsultasi online Dukcapil HSU lewat WhatsApp 0813-5068-5008." },
     tunggu("DPMPTSP HSU / OSS-RBA", ["Izin terbit (NIB/OSS)", "Izin dalam proses", "Rata-rata waktu layanan", "Izin terbanyak per sektor"]),
-    tunggu("Kanal pengaduan Pemkab HSU / SP4N-LAPOR!", ["Laporan masuk", "Laporan selesai", "Waktu tanggap rata-rata", "Kategori terbanyak"]),
+    { s: "ada", sumber: SUMBER_SDHSU + " — Diskominfosandi HSU, laporan/aduan masyarakat melalui SP4N-LAPOR 2020–2025",
+      ind: [["Laporan masuk 2025", "74", "naik 37% dari 54 laporan (2024)"], ["Laporan selesai 2025", "74", "100% ditindaklanjuti"],
+            ["Total 2020–2025", "246", "laporan masuk"], ["Tahun tertinggi", "2025", "74 laporan"]],
+      grafik: [{ judul: "Laporan/aduan masuk melalui SP4N-LAPOR (laporan)", labels: ["2020","2021","2022","2023","2024","2025"], values: [24,9,16,69,54,74], urut: false }],
+      info: "Seluruh laporan yang masuk pada 2020–2025 tercatat selesai. Waktu tanggap dan kategori laporan menunggu data Diskominfosandi." },
     { s: "ada", sumber: "Databoks Katadata (olahan data APBD HSU 2026); Perbup HSU No. 4 Tahun 2026 — angka dapat berubah setelah APBD Perubahan",
       ind: [["Pendapatan daerah", "Rp1.343,34 M", "anggaran 2026 (turun 9,06%)"], ["Belanja daerah", "Rp1.761,69 M", "anggaran 2026 (turun 2,08%)"],
             ["Realisasi belanja", "27,68%", "Rp487,69 M s.d. Juni 2026"], ["Transfer ke daerah", "Rp998,29 M", "anggaran 2026 (turun 17,98%)"]],
       grafik: [{ judul: "Realisasi belanja daerah s.d. Juni 2026 (Rp miliar)", dec: 2,
                  labels: ["Belanja pegawai", "Belanja barang & jasa", "Belanja lainnya", "Belanja modal"], values: [211.42, 148.51, 103.95, 23.81] }],
       info: "Belanja modal baru terealisasi Rp23,81 miliar pada semester I." },
-    { s: "ada", peta: 0, sumber: SUMBER_DUK + "; jumlah desa/kelurahan sesuai buku agregat tersebut",
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + "; jumlah desa/kelurahan: BPS HSU via " + SUMBER_SDHSU,
       ind: [["Kecamatan", "10"], ["Desa", "214"], ["Kelurahan", "5"], ["Aparatur / pejabat negara", fmtN(6063), "tercatat pada KTP"]],
-      grafik: [{ judul: "Penduduk berprofesi aparatur / pejabat negara per kecamatan (jiwa)", labels: KEC, values: APARAT }],
+      grafik: [{ judul: "Penduduk berprofesi aparatur / pejabat negara per kecamatan (jiwa)", labels: KEC, values: APARAT },
+               { judul: "Jumlah desa / kelurahan per kecamatan (2025)", labels: KEC, values: DESA }],
       info: "Daftar OPD, alamat, dan kontak layanan akan ditambahkan setelah data dari bagian organisasi tersedia." }
   ],
   ekonomi: [
-    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (berdasarkan pekerjaan di KTP, bukan sensus usaha)",
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + " (berdasarkan pekerjaan di KTP, bukan sensus usaha); KDKMP: " + SUMBER_SDHSU + " — Diskuperindag HSU",
       ind: [["Wiraswasta tercatat", fmtN(65725), "jiwa"], ["Porsi terhadap penduduk", "27,6%"],
             ["Wiraswasta perempuan", fmtN(18220), "27,7% dari wiraswasta"], ["Terbanyak", "Amuntai Tengah", fmtN(16156) + " jiwa"]],
-      grafik: [{ judul: "Penduduk wiraswasta per kecamatan (jiwa)", labels: KEC, values: WIRAUS }],
-      info: "Jumlah unit UMKM resmi (NIB, omzet, sektor) menunggu data Dinas Koperasi, UKM dan Perdagangan." },
+      grafik: [{ judul: "Penduduk wiraswasta per kecamatan (jiwa)", labels: KEC, values: WIRAUS },
+               { judul: "Koperasi Desa/Kelurahan Merah Putih (KDKMP) per kecamatan, 2025", labels: KEC, values: KDKMP }],
+      info: "Terdapat 219 KDKMP, satu di setiap desa/kelurahan (Diskuperindag HSU). Jumlah unit UMKM resmi (NIB, omzet, sektor) menunggu data Dinas Koperasi, UKM dan Perdagangan." },
     tunggu("Disperindag HSU / PIHPS Nasional", ["Harga beras medium", "Harga cabai rawit", "Harga telur ayam", "Harga ikan haruan"]),
     { s: "ada", peta: 0, sumber: SUMBER_DUK,
       ind: [["Petani / peternak", fmtN(19905), "jiwa"], ["Nelayan", fmtN(1739), "jiwa"],
@@ -95,7 +114,12 @@ const DATA = {
       grafik: [{ judul: "Petani / peternak per kecamatan (jiwa)", labels: KEC, values: TANI },
                { judul: "Nelayan per kecamatan (jiwa)", labels: KEC, values: NELAYAN }],
       info: "Luas panen, produksi padi lebak, dan produksi perikanan menunggu data Dinas Pertanian dan Dinas Perikanan." },
-    { s: "tunggu", sumber: "Disbudparpora HSU / BPS", ind: [["Destinasi wisata", "—"], ["Kunjungan wisatawan", "—"], ["Hotel & penginapan", "—"], ["Kegiatan budaya", "—"]],
+    { s: "ada", peta: 0, sumber: SUMBER_SDHSU + " — Disporapar HSU, objek wisata menurut kecamatan dan klasifikasi 2025 (Kabupaten HSU Dalam Angka 2026)",
+      ind: [["Objek wisata", fmtN(jml(WISATA)), "tercatat 2025"], ["Wisata air", fmtN(jml(W_AIR)), "terbanyak di Amuntai Selatan (8)"],
+            ["Cagar budaya", fmtN(jml(W_CAGAR)), "Babirik, Sungai Pandan, Amuntai Selatan, Sungai Tabukan"], ["Agrowisata", fmtN(jml(W_AGRO)), "keduanya di Paminggir"]],
+      grafik: [{ judul: "Objek wisata per kecamatan, 2025", labels: KEC, values: WISATA },
+               { judul: "Objek wisata menurut klasifikasi, 2025", labels: ["Wisata air", "Cagar budaya", "Agrowisata", "Kerajinan"], values: [jml(W_AIR), jml(W_CAGAR), jml(W_AGRO), jml(W_KRJN)] }],
+      info: "Amuntai Selatan memiliki objek terbanyak (10). Data kunjungan wisatawan, hotel, dan agenda budaya menunggu data Disporapar.",
       profil: ["Candi Agung Amuntai — situs sejarah di Amuntai Tengah", "Itik Alabio — ikon peternakan khas Sungai Pandan",
                "Kawasan rawa dan danau (Danau Panggang, Paminggir) — kerbau rawa dan kerajinan purun"] },
     { s: "ada", sumber: "Databoks Katadata (olahan data APBD HSU 2026)",
@@ -123,11 +147,10 @@ const DATA = {
             ["Disabilitas mental/jiwa", fmtN(506), "kategori terbanyak"], ["Lansia 65 th ke atas", fmtN(16975), "jiwa"]],
       grafik: [{ judul: "Penyandang disabilitas per kecamatan (jiwa)", labels: KEC, values: DISAB }],
       info: "Data penerima bantuan sosial (PKH, BPNT, DTSEN) menunggu data Dinas Sosial." },
-    { s: "ada", peta: 0, sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi (TPT) BPS",
+    { s: "ada", sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi (TPT) BPS",
       ind: [["Usia produktif 15–64 th", fmtN(167941), "jiwa"], ["Wiraswasta", fmtN(65725), "jiwa"],
             ["Pertanian / peternakan", fmtN(19905), "jiwa"], ["Belum / tidak bekerja", fmtN(70358), "termasuk anak & lansia"]],
-      grafik: [{ judul: "Penduduk usia produktif 15–64 th per kecamatan (jiwa)", labels: KEC, values: PROD },
-               { judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
+      grafik: [{ judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
                  values: [70358, 65725, 39710, 32594, 19905, 6063, 1739, 1128, 892, 288] }],
       info: "TPAK, TPT, dan lowongan kerja menunggu data BPS Sakernas dan Dinas Tenaga Kerja." }
   ],
@@ -143,15 +166,26 @@ const DATA = {
       grafik: [{ judul: "Pelajar / mahasiswa per kecamatan (jiwa)", labels: KEC, values: PELAJAR },
                { judul: "Tenaga pengajar per kecamatan (jiwa)", labels: KEC, values: PENGAJAR }],
       info: "Jumlah guru ASN/non-ASN dan rasio guru–murid menunggu data Dinas Pendidikan." },
-    tunggu("Dinas Perpustakaan dan Kearsipan HSU", ["Jumlah koleksi", "Anggota aktif", "Kunjungan per tahun", "Perpustakaan desa"]),
+    { s: "ada", sumber: SUMBER_SDHSU + " — Dinas Perpustakaan dan Kearsipan HSU: pengunjung 2023–2025, koleksi buku 2024 (10 klasifikasi), dan IPLM 2023–2025",
+      ind: [["Pengunjung perpustakaan daerah", fmtN(29831), "2025 · relatif sama dengan 2024 (29.853)"], ["Pengunjung mahasiswa", fmtN(19599), "65,7% dari seluruh pengunjung 2025"],
+            ["Koleksi buku", fmtN(43070), "eksemplar · " + fmtN(20373) + " judul (2024)"], ["IPLM 2025", "13,46", "metodologi baru; 2024: 80,60"]],
+      grafik: [{ judul: "Pengunjung perpustakaan daerah per tahun (orang)", labels: ["2023", "2024", "2025"], values: [27447, 29853, 29831], urut: false },
+               { judul: "Pengunjung menurut jenis, 2025 (orang)", labels: ["Mahasiswa", "Pelajar SLTA", "Umum", "Pelajar SD", "Pelajar SLTP", "Guru/Dosen", "TK/PAUD", "PNS/TNI/POLRI", "Istimewa"],
+                 values: [19599, 2916, 2269, 1833, 1710, 643, 543, 317, 1] },
+               { judul: "Koleksi buku menurut klasifikasi, 2024 (eksemplar)", labels: ["200 Agama", "600 Teknologi", "300 Ilmu sosial", "800 Sastra", "700 Seni & olahraga", "500 Sains", "000 Karya umum", "100 Filsafat", "900 Sejarah", "400 Bahasa"],
+                 values: [15286, 6756, 5582, 3942, 2995, 2231, 2162, 2015, 1190, 911] }],
+      info: "Mulai 2025 Perpusnas memakai metodologi baru IPLM sehingga nilai 2025 tidak dapat dibandingkan langsung dengan tahun sebelumnya. Jumlah perpustakaan desa dan anggota aktif menunggu data Dispersip." },
     tunggu("Dinas Pendidikan / Bagian Kesra HSU", ["Program beasiswa", "Jumlah penerima", "Anggaran", "Jenjang sasaran"])
   ],
   kesehatan: [
-    { s: "ada", peta: 0, sumber: SUMBER_DUK + ". Angka tenaga kesehatan hanya yang mencantumkan profesinya di KTP, bukan jumlah resmi SDM kesehatan",
-      ind: [["Penduduk dilayani", fmtN(238435), "jiwa · 10 kecamatan"], ["Tenaga kesehatan (KTP)", fmtN(288), "jiwa tercatat"],
-            ["Lansia 65 th ke atas", fmtN(16975), "sasaran layanan lansia"], ["Anak usia 0–18 th", fmtN(69824), "sasaran layanan anak"]],
-      grafik: [{ judul: "Tenaga kesehatan tercatat per kecamatan (jiwa)", labels: KEC, values: NAKES }],
-      info: "Jumlah dan lokasi puskesmas, puskesmas pembantu, rumah sakit, dan klinik menunggu data Dinas Kesehatan." },
+    { s: "ada", peta: 0, sumber: SUMBER_SDHSU + " — Dinas Kesehatan HSU: jumlah puskesmas dan tenaga kesehatan menurut kecamatan 2025 (Kabupaten HSU Dalam Angka 2026); penduduk: " + SUMBER_DUK,
+      ind: [["Puskesmas", fmtN(jml(PKM)), "tersebar di 10 kecamatan"], ["Dokter", fmtN(jml(TK_DOKTER) + jml(TK_SPESIALIS)), fmtN(jml(TK_DOKTER)) + " umum · " + fmtN(jml(TK_SPESIALIS)) + " spesialis"],
+            ["Perawat", fmtN(jml(TK_PERAWAT)), "tenaga keperawatan"], ["Bidan", fmtN(jml(TK_BIDAN)), "tenaga kebidanan"]],
+      grafik: [{ judul: "Tenaga kesehatan per kecamatan, 2025 (orang)", labels: KEC, values: NAKES_ALL },
+               { judul: "Puskesmas per kecamatan, 2025 (unit)", labels: KEC, values: PKM },
+               { judul: "Tenaga kesehatan menurut jenis, 2025 (orang)", labels: ["Bidan", "Perawat", "Dokter spesialis", "Dokter umum", "Gizi", "Farmasi", "Kesehatan masyarakat", "Dokter gigi", "Analis laboratorium", "Kesehatan lingkungan"],
+                 values: [jml(TK_BIDAN), jml(TK_PERAWAT), jml(TK_SPESIALIS), jml(TK_DOKTER), jml(TK_GIZI), jml(TK_FARMASI), jml(TK_KESMAS), jml(TK_GIGI), jml(TK_ATLM), jml(TK_KESLING)] }],
+      info: "Rata-rata ±" + fmtN(Math.round(238435 / jml(PKM))) + " penduduk per puskesmas. Seluruh dokter spesialis tercatat di Amuntai Tengah (lokasi rumah sakit)." },
     tunggu("Dinas Kesehatan HSU (SKDR / SIHA)", ["Kasus DBD", "Kasus TB", "Kasus diare", "Kasus ISPA"]),
     { s: "ada", sumber: "SSGI 2024 (dikutip ANTARA Kalsel, Wabup HSU); Dukcapil HSU Semester I 2025 (balita)",
       ind: [["Prevalensi stunting 2024", "36%", "hasil SSGI"], ["Perubahan", "+8 poin", "dari 28% pada 2023"],
@@ -173,7 +207,13 @@ const DATA = {
     tunggu("Dinas Lingkungan Hidup HSU", ["Titik pemantauan", "Indeks Kualitas Air", "Parameter melampaui baku mutu", "Pemantauan terakhir"])
   ],
   mobilitas: [
-    tunggu("Dinas PUPR HSU", ["Panjang jalan kabupaten", "Kondisi baik (%)", "Jalan rusak (km)", "Jalan nasional/provinsi"]),
+    { s: "ada", sumber: SUMBER_SDHSU + " — Dinas PUPR HSU, panjang jalan menurut kondisi 2022–2025 (Kabupaten HSU Dalam Angka 2026)",
+      ind: [["Panjang jalan tercatat", fmtN(379.62, 2) + " km", "2025"], ["Kondisi baik", fmtN(162.58, 2) + " km", "42,8% dari total"],
+            ["Kondisi sedang", fmtN(77.92, 2) + " km", "20,5% dari total"], ["Rusak + rusak berat", fmtN(139.12, 2) + " km", "36,6% dari total"]],
+      grafik: [{ judul: "Panjang jalan menurut kondisi, 2025 (km)", labels: ["Baik", "Rusak berat", "Sedang", "Rusak"], values: [162.58, 107.48, 77.92, 31.64], dec: 2 },
+               { judul: "Jalan kondisi baik per tahun (km)", labels: ["2022", "2023", "2024", "2025"], values: [159.44, 174.13, 189.82, 162.58], dec: 2, urut: false },
+               { judul: "Jalan rusak berat per tahun (km)", labels: ["2022", "2023", "2024", "2025"], values: [105.20, 91.56, 153.57, 107.48], dec: 2, urut: false }],
+      info: "Total jalan tercatat naik dari 328,8 km (2022–2023) menjadi 379,6 km (2024–2025). Data per kecamatan, jalan nasional/provinsi, dan jembatan menunggu data Dinas PUPR." },
     tunggu("Dinas Perhubungan HSU", ["Rute angkutan", "Armada", "Terminal", "Dermaga / angkutan sungai"]),
     tunggu("Dinas Perhubungan / Satlantas Polres HSU", ["Kejadian kecelakaan", "Korban", "Titik rawan", "Pelanggaran"]),
     tunggu("Dinas PUPR HSU", ["Jumlah jembatan", "Kondisi baik (%)", "Panjang total", "Perlu perbaikan"])
