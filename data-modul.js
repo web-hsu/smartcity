@@ -322,38 +322,87 @@ async function muatHotspot() {
 }
 muatHotspot(); setInterval(muatHotspot, 600000);
 
-// ---------- Cuaca & kondisi udara per kecamatan (BMKG, lewat Apps Script yang sama: ?d=cuaca) ----------
+// ---------- Lingkungan: kualitas udara (model CAMS via Open-Meteo) + cuaca (BMKG via Apps Script ?d=cuaca) ----------
+let CUACA_HSU = null, UDARA_HSU = null;
+const kategoriAQI = a => a <= 50 ? "Baik" : a <= 100 ? "Sedang" : a <= 150 ? "Tidak sehat bagi kelompok sensitif" : a <= 200 ? "Tidak sehat" : a <= 300 ? "Sangat tidak sehat" : "Berbahaya";
+const rataArr = a => a.reduce((s, v) => s + v, 0) / a.length;
+
+function pusatKecamatan() {                                                         // titik tengah tiap poligon kecamatan: [lat, lon]
+  const out = {};
+  BATAS_HSU_GEOJSON.features.filter(f => f.properties && f.properties.level === "kecamatan").forEach(f => {
+    const r = f.geometry.coordinates; let a = 0, cx = 0, cy = 0;
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const k = r[j][0] * r[i][1] - r[i][0] * r[j][1]; a += k; cx += (r[j][0] + r[i][0]) * k; cy += (r[j][1] + r[i][1]) * k; }
+    out[f.properties.name] = Math.abs(a) > 1e-12 ? [cy / (3 * a), cx / (3 * a)] : [rataArr(r.map(p => p[1])), rataArr(r.map(p => p[0]))];
+  });
+  return out;
+}
+
+function gagalLingkungan(nama, e) {
+  console.warn(nama + " tidak dapat dimuat:", e);
+  const d = DATA.lingkungan[0];                                                     // tampilkan penyebab di panel selama data belum ada
+  if (d && d.s === "link") { d.info = nama + " belum dapat dimuat (" + (e && e.message ? e.message : e) + "). " + d.info.replace(/^.*?\)\.\s/, ""); if (typeof gambarPanel === "function") gambarPanel(); }
+}
+
+function susunLingkungan() {
+  const ind = [], grafik = [], sumber = [], info = [];
+  if (UDARA_HSU) {
+    const n = KEC.filter(k => UDARA_HSU.kec[k] && UDARA_HSU.kec[k].aqi !== null);
+    if (n.length) {
+      const aqi = rataArr(n.map(k => UDARA_HSU.kec[k].aqi)), pm = n.filter(k => UDARA_HSU.kec[k].pm25 !== null).map(k => UDARA_HSU.kec[k].pm25);
+      const top = n.reduce((m, k) => UDARA_HSU.kec[k].aqi > UDARA_HSU.kec[m].aqi ? k : m);
+      ind.push(["Indeks kualitas udara (US AQI)", fmtN(aqi), kategoriAQI(aqi) + " · rata-rata kabupaten"],
+               ["PM2,5 rata-rata", pm.length ? fmtN(rataArr(pm), 1) + " µg/m³" : "—", "pembaruan " + UDARA_HSU.waktu.slice(11, 16) + " WITA"],
+               ["AQI tertinggi", fmtN(UDARA_HSU.kec[top].aqi), top]);
+      grafik.push({ judul: "Indeks kualitas udara (US AQI) per kecamatan", labels: n, values: n.map(k => UDARA_HSU.kec[k].aqi), dec: 0 });
+      const p25 = n.filter(k => UDARA_HSU.kec[k].pm25 !== null), p10 = n.filter(k => UDARA_HSU.kec[k].pm10 !== null);
+      if (p25.length) grafik.push({ judul: "PM2,5 per kecamatan (µg/m³)", labels: p25, values: p25.map(k => UDARA_HSU.kec[k].pm25), dec: 1 });
+      if (p10.length) grafik.push({ judul: "PM10 per kecamatan (µg/m³)", labels: p10, values: p10.map(k => UDARA_HSU.kec[k].pm10), dec: 1 });
+      sumber.push("Kualitas udara: model CAMS (Copernicus Atmosphere Monitoring Service) melalui Open-Meteo, dihitung di titik tengah tiap kecamatan");
+      info.push("Angka kualitas udara berasal dari model satelit/atmosfer beresolusi kasar (puluhan km), bukan alat ukur di lapangan, sehingga antar kecamatan cenderung mirip dan bisa berbeda dari pengukuran stasiun.");
+    }
+  }
+  if (CUACA_HSU) {
+    const ada = KEC.filter(k => CUACA_HSU.kec[k]);
+    if (ada.length) {
+      const g = (judul, key, dec) => ({ judul: judul, labels: ada, values: ada.map(k => CUACA_HSU.kec[k][key] || 0), dec: dec });
+      const rata = key => rataArr(ada.map(k => CUACA_HSU.kec[k][key]).filter(v => v !== null && !isNaN(v)));
+      ind.push(["Suhu rata-rata", fmtN(rata("t"), 1) + " °C", "prakiraan " + String(CUACA_HSU.kec[ada[0]].w || "").slice(11, 16) + " waktu setempat"],
+               ["Kelembapan rata-rata", fmtN(rata("hu")) + "%", "rata-rata " + ada.length + " kecamatan"], ["Angin rata-rata", fmtN(rata("ws"), 1) + " km/jam", "kecepatan prakiraan"]);
+      grafik.push(g("Suhu udara per kecamatan (°C)", "t", 1), g("Kelembapan udara per kecamatan (%)", "hu", 0), g("Kecepatan angin per kecamatan (km/jam)", "ws", 1));
+      sumber.push("Cuaca: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) — Prakiraan Cuaca Terbuka data.bmkg.go.id, desa/kelurahan wakil tiap kecamatan");
+      const hujan = ada.filter(k => /hujan|petir/i.test(CUACA_HSU.kec[k].c || "")).length;
+      if (hujan) info.push(hujan + " kecamatan diprakirakan hujan/petir pada jam ini.");
+    }
+  }
+  if (!ind.length) return;
+  DATA.lingkungan[0] = { s: "ada", peta: 0, sumber: sumber.join("; "), ind: ind, grafik: grafik, info: info.join(" ") };
+  if (typeof gambarPanel === "function") gambarPanel();
+}
+
+async function muatUdara() {
+  try {
+    const p = pusatKecamatan(), nama = KEC.filter(k => p[k]);
+    if (!nama.length) return;
+    const url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + nama.map(k => p[k][0].toFixed(4)).join(",") +
+      "&longitude=" + nama.map(k => p[k][1].toFixed(4)).join(",") + "&current=us_aqi,pm2_5,pm10&timezone=Asia%2FMakassar";
+    const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status);
+    let j = await r.json(); j = Array.isArray(j) ? j : [j];
+    const kec = {}; let waktu = "";
+    j.forEach((x, i) => { const c = x && x.current; if (!c || nama[i] === undefined) return; waktu = waktu || c.time || "";
+      const v = z => (z === null || z === undefined || isNaN(z)) ? null : Number(z);
+      kec[nama[i]] = { aqi: v(c.us_aqi), pm25: v(c.pm2_5), pm10: v(c.pm10) }; });
+    if (!Object.keys(kec).length) throw new Error("respons kosong");
+    UDARA_HSU = { kec: kec, waktu: waktu }; susunLingkungan();
+  } catch (e) { gagalLingkungan("Data kualitas udara", e); }
+}
+
 async function muatCuaca() {
   if (!HOTSPOT_API || HOTSPOT_API.indexOf("http") !== 0) return;
   try {
     const r = await fetch(HOTSPOT_API + (HOTSPOT_API.indexOf("?") < 0 ? "?" : "&") + "d=cuaca"); if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json(); if (j.error) throw new Error(j.error);
-    const ada = KEC.filter(n => j.kec[n]);                                         // hanya kecamatan yang datanya diterima
-    if (!ada.length) return;
-    const nilai = k => ada.map(n => j.kec[n][k]).filter(v => v !== null && !isNaN(v));
-    const rata = k => { const a = nilai(k); return a.reduce((s, v) => s + v, 0) / a.length; };
-    const vsAda = ada.filter(n => j.kec[n].vs !== null && !isNaN(j.kec[n].vs));
-    const vsMin = vsAda.length ? vsAda.reduce((m, n) => j.kec[n].vs < j.kec[m].vs ? n : m) : null;
-    const g = (judul, k, dec) => ({ judul: judul, labels: ada, values: ada.map(n => j.kec[n][k] || 0), dec: dec });
-    const waktu = j.kec[ada[0]].w || j.diperbarui;
-    const hujan = ada.filter(n => /hujan|petir/i.test(j.kec[n].c || "")).length;
-    DATA.lingkungan[0] = {
-      s: "ada", peta: vsAda.length ? 0 : undefined, sumber: "BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) — Prakiraan Cuaca Terbuka data.bmkg.go.id, desa/kelurahan wakil tiap kecamatan; prakiraan per 3 jam, diperbarui 2 kali sehari",
-      ind: [["Suhu rata-rata", fmtN(rata("t"), 1) + " °C", "rata-rata " + ada.length + " kecamatan"], ["Kelembapan rata-rata", fmtN(rata("hu")) + "%", "prakiraan " + String(waktu).slice(11, 16) + " waktu setempat"],
-            ["Angin rata-rata", fmtN(rata("ws"), 1) + " km/jam", "kecepatan prakiraan"],
-            ["Jarak pandang terendah", vsMin ? j.kec[vsMin].vst + " km" : "—", vsMin || "data jarak pandang belum ada"]],
-      grafik: [g("Jarak pandang per kecamatan (km)", "vs", 1), g("Suhu udara per kecamatan (°C)", "t", 1), g("Kelembapan udara per kecamatan (%)", "hu", 0), g("Kecepatan angin per kecamatan (km/jam)", "ws", 1)],
-      info: (hujan ? hujan + " kecamatan diprakirakan hujan/petir pada jam ini. " : "") + "Ini data cuaca BMKG, bukan indeks kualitas udara (AQI/PM2,5). Nilai AQI terkini tersedia di dashboard Siaga Karhutla: web-hsu.github.io/siagakarhutla"
-    };
-    if (vsAda.length === 0) delete DATA.lingkungan[0].peta;
-    if (typeof gambarPanel === "function") gambarPanel();
-  } catch (e) {
-    console.warn("Cuaca BMKG tidak dapat dimuat:", e);
-    const d = DATA.lingkungan[0];                                                 // tampilkan penyebabnya di panel agar mudah dilacak
-    if (d && d.s === "link" && String(d.info).indexOf("Data BMKG belum") !== 0) {
-      d.info = "Data BMKG belum dapat dimuat (" + (e && e.message ? e.message : e) + "). " + d.info;
-      if (typeof gambarPanel === "function") gambarPanel();
-    }
-  }
+    CUACA_HSU = j; susunLingkungan();
+  } catch (e) { gagalLingkungan("Data cuaca BMKG", e); }
 }
+muatUdara(); setInterval(muatUdara, 3600 * 1000);
 muatCuaca(); setInterval(muatCuaca, 3 * 3600 * 1000);
