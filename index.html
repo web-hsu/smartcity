@@ -136,6 +136,12 @@
     #legPeta .lr{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
     #legPeta .lr i{font-style:normal}
 
+    .kej{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+    .kej li{padding:7px 10px;background:var(--panel2);border:1px solid rgba(29,111,214,.5);border-left:3px solid var(--gold1)}
+    .kej b{display:block;font-size:14px;color:#fff}
+    .kej span{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+    .kej em{display:block;font-style:normal;font-size:12.5px;color:var(--cyan);margin-top:2px}
+
     /* ================= DOCK BAWAH ================= */
     .dock{position:fixed;z-index:1000;left:50%;bottom:0;transform:translateX(-50%);display:flex;gap:4px;padding:8px 26px 6px;
       background:linear-gradient(180deg,rgba(8,48,102,.92),rgba(3,22,52,.96));border-top:2px solid var(--cyan);
@@ -265,6 +271,7 @@
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
     <symbol id="i-item" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8M12 8v8"/></symbol>
     <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 3L3 5v16l6-2 6 2 6-2V3l-6 2-6-2zM9 3v16M15 5v16"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
     <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></symbol>
   </defs>
 </svg>
@@ -309,7 +316,10 @@ const BIDANG = [
       ["Lalu Lintas", "Kepadatan dan kejadian"], ["Jembatan & Infrastruktur", "Kondisi dan lokasi"] ] },
   { id: "kebencanaan", nama: "Kebencanaan", ikon: "i-alert", sisi: "kanan", modul: [
       ["Titik Panas & Karhutla", "Hotspot dan patroli"], ["Banjir & Genangan", "Titik dan ketinggian air"],
-      ["Kejadian Bencana", "Riwayat dan dampak"], ["Posko & Jalur Evakuasi", "Lokasi dan rute"] ] }
+      ["Kejadian Bencana", "Riwayat dan dampak"], ["Posko & Jalur Evakuasi", "Lokasi dan rute"] ] },
+  { id: "listrik", nama: "Kelistrikan", ikon: "i-bolt", sisi: "kanan", modul: [
+      ["Kontinuitas Pasokan", "Status dan keandalan listrik"], ["Gangguan Cuaca Jaringan 20 kV", "Penyulang terdampak cuaca"],
+      ["Jadwal Pemeliharaan", "Padam terencana"], ["Wilayah Pemadaman", "Sebaran padam saat ini"] ] }
 ];
 
 // ---------- Data modul ----------
@@ -713,10 +723,11 @@ function detailModul(b, i) {
   let h = '<section class="kartu"><h2 class="kartu-judul">Indikator Utama <small>' + esc(m[0]) + '</small></h2><div class="ind-row">' +
     d.ind.map(x => '<div class="ind"><b>' + esc(x[1]) + '</b><span>' + esc(x[0]) + '</span>' + (x[2] ? '<em>' + esc(x[2]) + '</em>' : "") + '</div>').join("") +
     '</div>' + (d.info ? '<p class="catatan">' + esc(d.info) + '</p>' : "") + '</section>';
+  if (d.daftar) h += daftarKartu(d);
   if (d.grafik) {
     h += '<section class="kartu"><h2 class="kartu-judul">Grafik <small>' + (d.peta !== undefined ? "Peta tematik aktif" : "Perbandingan") + '</small></h2>' +
       d.grafik.map(gambarGrafik).join("") + '<p class="catatan sumber">Sumber: ' + esc(d.sumber) + '</p></section>';
-  } else {
+  } else if (!d.daftar) {
     h += '<section class="kartu"><h2 class="kartu-judul">Status Data <small>' + (d.s === "link" ? "Dashboard" : "Menunggu") + '</small></h2>';
     if (d.s === "link") h += '<a class="btn-link" href="' + d.link.url + '" target="_blank" rel="noopener">' + esc(d.link.teks) + ' ↗</a>';
     else h += '<div class="kosong kecil">Data belum terhubung.<br>Indikator di atas akan terisi setelah data dari OPD tersedia.</div>';
@@ -725,6 +736,143 @@ function detailModul(b, i) {
   }
   return h;
 }
+
+// ---------- Kelistrikan (data dari PLN ULP Amuntai / UP3 Barabai) ----------
+// PLN tidak menyediakan API publik, jadi halaman membaca satu berkas JSON (lihat pln-feed-Kode.gs)
+// yang diisi/disinkronkan oleh ULP Amuntai. Isi URL web app-nya di sini:
+const PLN_FEED_URL = "";   // tempel URL web app (berakhiran /exec) dari pln-feed-Kode.gs
+let PLN = null, PLN_ERR = "";
+const SUMBER_PLN = "PT PLN (Persero) ULP Amuntai / UP3 Barabai";
+const WARNA_PADAM = "#ff5a5a", WARNA_PEMELIHARAAN = "#ffb020";
+
+// Adaptor: mengubah respons /api/environment/power (daftar kejadian PLN) menjadi format modul Kelistrikan.
+// Format lama (kontinuitas/cuaca/pemeliharaan/padam) tetap diterima apa adanya.
+function tglObj(s) {
+  if (s instanceof Date) return s;
+  const m = /^(\d{4}-\d\d-\d\d)[ T](\d\d:\d\d(?::\d\d)?)(?:\.\d+)?\s*(WITA|WIB|WIT)?$/.exec(String(s || "").trim());
+  if (m) {
+    const off = m[3] === "WIB" ? "+07:00" : m[3] === "WIT" ? "+09:00" : "+08:00";
+    return new Date(m[1] + "T" + (m[2].length === 5 ? m[2] + ":00" : m[2]) + off);
+  }
+  return new Date(s);
+}
+function normalisasiPLN(j) {
+  if (!j) return j;
+  if (!Array.isArray(j) && (j.kontinuitas || j.padam || j.cuaca || j.pemeliharaan)) return j;
+  let items = Array.isArray(j) ? j : (j.data || j.items || j.events || j.results || j.outages);
+  if (!Array.isArray(items)) { items = []; Object.keys(j).forEach(k => { if (!items.length && Array.isArray(j[k])) items = j[k]; }); }
+  // Hanya Provinsi Kalimantan Selatan, Kab. Hulu Sungai Utara: buang kejadian dari kabupaten lain / kecamatan di luar HSU.
+  const asalHSU = it => {
+    const kab = it.kabupaten || it.regency || "", prov = it.provinsi || it.province || "";
+    if (kab && !/hulu sungai utara|\bhsu\b/i.test(kab)) return false;
+    if (prov && !/kalimantan selatan|kalsel/i.test(prov)) return false;
+    return !it.districtName || kecPLN([it.districtName]).length > 0;
+  };
+  const semua = items.length;
+  items = items.filter(asalHSU);
+  if (items.length < semua) console.warn("PLN: " + (semua - items.length) + " kejadian dibuang karena di luar wilayah HSU / nama kecamatan tidak dikenali.");
+  const teks = it => (it.jenis || "") + " " + (it.title || "") + " " + (it.cause || "");
+  const selesai = it => /selesai|pulih|normal/i.test(it.status || "");
+  const rencana = it => /pemeliharaan|terencana/i.test(teks(it));
+  const cuacaIt = it => /cuaca|petir|hujan|angin|badai|banjir/i.test(teks(it));
+  const kec = it => it.districtName || "";
+  const aktif = items.filter(it => !selesai(it));
+  const pelPadam = aktif.reduce((a, it) => a + (Number(it.affectedCustomers) || 0), 0);
+  return {
+    diperbarui: j.timestamp || j.diperbarui || "",
+    sumber: j.source || j.sumber || "",
+    demo: /demo/i.test(String(j.dataFreshness || "")) || items.some(it => it.isDemo === true),
+    kontinuitas: {
+      status: aktif.some(cuacaIt) ? "Siaga Cuaca" : aktif.length ? "Ada Gangguan" : "Normal",
+      periode: "Kondisi saat ini", pelanggan_padam: pelPadam,
+      penyulang: aktif.map(it => ({ nama: it.feederName || it.title, wilayah: [kec(it), it.villageName].filter(Boolean).join(" · "), status: it.status }))
+    },
+    cuaca: items.filter(cuacaIt).map(it => ({ penyulang: it.feederName, kecamatan: [kec(it)], kejadian: it.title, waktu: it.startTime, status: selesai(it) ? "Pulih" : (it.status || "Aktif") })),
+    pemeliharaan: items.filter(rencana).map(it => {
+      const d = tglObj(it.startTime), e = tglObj(it.estimatedRestoration), jam = x => isNaN(x) ? "" : x.toLocaleTimeString("id-ID", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit", hour12: false }).replace(/\./g, ":");
+      return { tanggal: isNaN(d) ? "" : d.toISOString(), jam_mulai: jam(d), jam_selesai: jam(e), penyulang: it.feederName, kecamatan: [kec(it)], lokasi: it.villageName, keterangan: it.cause };
+    }),
+    padam: aktif.map(it => ({ area: it.title, kecamatan: [kec(it)], jenis: rencana(it) ? "Pemeliharaan terencana" : (it.status || "Gangguan"),
+      penyebab: it.cause, mulai: it.startTime, estimasi_pulih: it.estimatedRestoration, pelanggan: Number(it.affectedCustomers) || 0 }))
+  };
+}
+
+function muatPLN() {
+  if (!PLN_FEED_URL) return;
+  fetch(PLN_FEED_URL + (PLN_FEED_URL.indexOf("?") < 0 ? "?" : "&") + "t=" + Date.now())
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(j => { PLN = normalisasiPLN(j); PLN_ERR = ""; })
+    .catch(e => { PLN_ERR = String(e && e.message || e); })
+    .then(() => { DATA.listrik = bangunListrik(); if (!bidangAktif || bidangAktif === "listrik") gambarPanel(); });
+}
+function waktuPLN(s) {
+  const d = tglObj(s); if (!s || isNaN(d)) return "—";
+  return d.toLocaleString("id-ID", { timeZone: "Asia/Makassar", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).replace(/\./g, ":") + " WITA";
+}
+function tglPLN(s) {
+  const d = tglObj(s); if (!s || isNaN(d)) return String(s || "—");
+  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Makassar", day: "numeric", month: "short", year: "numeric" });
+}
+function kecPLN(a) { // cocokkan nama kecamatan dengan daftar KEC (tanpa peduli huruf besar/kecil)
+  return (Array.isArray(a) ? a : String(a || "").split(",")).map(x => String(x).replace(/\s*\(.*?\)\s*/g, " ").trim())
+    .map(x => KEC.find(k => k.toLowerCase() === x.toLowerCase())).filter(Boolean);
+}
+function bangunListrik() {
+  const labelTunggu = [
+    ["Status pasokan", "SAIDI", "SAIFI", "Pelanggan padam"],
+    ["Gangguan cuaca aktif", "Penyulang terdampak", "Total kejadian", "Pembaruan"],
+    ["Jadwal mendatang", "Terdekat", "Kecamatan terdampak", "Pembaruan"],
+    ["Area padam", "Kecamatan terdampak", "Pelanggan terdampak", "Pembaruan"]];
+  if (!PLN) {
+    const info = PLN_ERR ? "Gagal membaca data PLN (" + PLN_ERR + "). Coba muat ulang halaman."
+      : "Belum terhubung ke data PLN. Isi PLN_FEED_URL pada index.html dengan alamat data dari ULP Amuntai.";
+    return labelTunggu.map(l => ({ s: "tunggu", ind: l.map(x => [x, "—"]), sumber: SUMBER_PLN, info: info }));
+  }
+  const upd = waktuPLN(PLN.diperbarui), sumber = (PLN.sumber || SUMBER_PLN) + " · diperbarui " + upd + (PLN.demo ? " · DATA DEMO (bukan data real-time)" : "");
+  const k = PLN.kontinuitas || {}, cu = PLN.cuaca || [], pm = PLN.pemeliharaan || [], pd = PLN.padam || [];
+  const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
+
+  const m0 = { s: "ada", sumber: sumber, daftarJudul: "Status penyulang 20 kV",
+    ind: [["Status pasokan", k.status || "—", k.periode || ""], ["SAIDI", k.saidi !== undefined ? fmtN(k.saidi, 2) : "—", "menit/pelanggan"],
+          ["SAIFI", k.saifi !== undefined ? fmtN(k.saifi, 2) : "—", "kali/pelanggan"],
+          ["Pelanggan padam", fmtN(k.pelanggan_padam || 0), (k.pelanggan_total ? "dari " + fmtN(k.pelanggan_total) + " pelanggan" : "pelanggan terdampak")]],
+    daftar: (k.penyulang || []).map(p => ({ judul: p.nama || p.penyulang || "Penyulang", sub: p.wilayah || "", teks: p.status || "" })) };
+
+  const aktif = cu.filter(c => !/pulih|normal|selesai/i.test(c.status || ""));
+  const m1 = { s: "ada", sumber: sumber, daftarJudul: "Gangguan cuaca pada jaringan 20 kV",
+    ind: [["Gangguan cuaca aktif", fmtN(aktif.length)], ["Penyulang terdampak", fmtN(uniq(cu.map(c => c.penyulang)).length)],
+          ["Total kejadian", fmtN(cu.length), "pada data terbaru"], ["Pembaruan", upd]],
+    daftar: cu.map(c => ({ judul: (c.penyulang || "Penyulang") + (kecPLN(c.kecamatan).length ? " · " + kecPLN(c.kecamatan).join(", ") : ""),
+      sub: [c.kejadian, c.waktu ? waktuPLN(c.waktu) : ""].filter(Boolean).join(" · "), teks: c.status || "" })) };
+
+  const pms = pm.slice().sort((a, b) => String(a.tanggal).localeCompare(String(b.tanggal)));
+  const m2 = { s: "ada", sumber: sumber, daftarJudul: "Jadwal pemeliharaan (padam terencana)",
+    ind: [["Jadwal mendatang", fmtN(pms.length)], ["Terdekat", pms.length ? tglPLN(pms[0].tanggal) : "—"],
+          ["Kecamatan terdampak", fmtN(uniq([].concat.apply([], pms.map(p => kecPLN(p.kecamatan)))).length)], ["Pembaruan", upd]],
+    daftar: pms.map(p => ({ judul: tglPLN(p.tanggal) + (p.jam_mulai ? " · " + p.jam_mulai + (p.jam_selesai ? "–" + p.jam_selesai : "") : ""),
+      sub: [p.penyulang, kecPLN(p.kecamatan).join(", ")].filter(Boolean).join(" · "), teks: [p.lokasi, p.keterangan].filter(Boolean).join(" — ") })) };
+
+  const warna = {};
+  pms.forEach(p => kecPLN(p.kecamatan).forEach(n => { warna[n] = WARNA_PEMELIHARAAN; }));
+  pd.forEach(p => kecPLN(p.kecamatan).forEach(n => { if (!/pemeliharaan/i.test(p.jenis || "") || !warna[n]) warna[n] = /pemeliharaan/i.test(p.jenis || "") ? WARNA_PEMELIHARAAN : WARNA_PADAM; }));
+  const m3 = { s: "ada", sumber: sumber, daftarJudul: "Wilayah pemadaman saat ini", warna: warna,
+    legenda: '<b>Status pasokan</b><span><i style="border-top:8px solid ' + WARNA_PADAM + '"></i> Padam (gangguan)</span><span><i style="border-top:8px solid ' + WARNA_PEMELIHARAAN + '"></i> Padam terencana</span>',
+    ind: [["Area padam", fmtN(pd.length)], ["Kecamatan terdampak", fmtN(uniq([].concat.apply([], pd.map(p => kecPLN(p.kecamatan)))).length)],
+          ["Pelanggan terdampak", fmtN(pd.reduce((a, p) => a + (Number(p.pelanggan) || 0), 0))], ["Pembaruan", upd]],
+    daftar: pd.map(p => ({ judul: (p.area || kecPLN(p.kecamatan).join(", ") || "Area padam"),
+      sub: [kecPLN(p.kecamatan).join(", "), p.mulai ? "mulai " + waktuPLN(p.mulai) : "", p.estimasi_pulih ? "estimasi pulih " + waktuPLN(p.estimasi_pulih) : ""].filter(Boolean).join(" · "),
+      teks: [p.jenis, p.penyebab].filter(Boolean).join(" — ") })) };
+  const hasil = [m0, m1, m2, m3];
+  if (PLN.demo) hasil.forEach(m => { m.info = "Perhatian: sumber data menandai isi ini sebagai DATA DEMO, bukan kondisi jaringan sebenarnya."; });
+  return hasil;
+}
+function daftarKartu(d) {
+  return '<section class="kartu"><h2 class="kartu-judul">' + esc(d.daftarJudul) + ' <small>' + d.daftar.length + ' data</small></h2>' +
+    (d.daftar.length ? '<ul class="kej">' + d.daftar.map(x => '<li><b>' + esc(x.judul) + '</b>' + (x.sub ? '<span>' + esc(x.sub) + '</span>' : "") + (x.teks ? '<em>' + esc(x.teks) + '</em>' : "") + '</li>').join("") + '</ul>'
+      : '<div class="kosong kecil">Tidak ada data pada pembaruan terakhir.</div>') +
+    '<p class="catatan sumber">Sumber: ' + esc(d.sumber) + '</p></section>';
+}
+DATA.listrik = bangunListrik();
 
 // ---------- Peta tematik (pewarnaan kecamatan mengikuti grafik modul aktif) ----------
 let warnaKec = {};
@@ -744,16 +892,20 @@ function gayaSemua() {
 function terapkanPeta() {
   warnaKec = {};
   const leg = $("legPeta");
-  let g = null;
+  let g = null, manual = null;
   if (bidangAktif && modulAktif !== null) {
     const b = BIDANG.find(x => x.id === bidangAktif), d = (DATA[b.id] || [])[modulAktif];
     if (d && d.peta !== undefined && d.grafik) g = d.grafik[d.peta];
+    if (d && d.warna) manual = d;
   }
   if (g) {
     const mn = Math.min.apply(null, g.values), mx = Math.max.apply(null, g.values);
     g.labels.forEach((n, i) => { warnaKec[n] = skala(mx === mn ? .5 : (g.values[i] - mn) / (mx - mn)); });
     leg.style.display = "flex";
     leg.innerHTML = '<b>' + esc(g.judul) + '</b><span class="grad"></span><span class="lr"><i>' + fmtN(mn, g.dec) + '</i><i>' + fmtN(mx, g.dec) + '</i></span>';
+  } else if (manual) {
+    warnaKec = Object.assign({}, manual.warna);
+    leg.style.display = "flex"; leg.innerHTML = manual.legenda;
   } else leg.style.display = "none";
   gayaSemua();
 }
@@ -805,6 +957,7 @@ function init() {
   muatLabelKecamatan();
   paskanKabupaten(false);
   ketukJam(); setInterval(ketukJam, 1000);
+  muatPLN(); setInterval(muatPLN, 5 * 60 * 1000);
   let sempitLama = window.innerWidth <= 820;
   window.addEventListener("resize", () => { paskanKabupaten(false); aturLabelKecamatan(); const s = window.innerWidth <= 820; if (s !== sempitLama) { sempitLama = s; gambarPanel(); } });
   setTimeout(() => { paskanKabupaten(false); aturLabelKecamatan(); }, 300);
