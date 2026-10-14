@@ -123,10 +123,11 @@ const DATA = {
             ["Disabilitas mental/jiwa", fmtN(506), "kategori terbanyak"], ["Lansia 65 th ke atas", fmtN(16975), "jiwa"]],
       grafik: [{ judul: "Penyandang disabilitas per kecamatan (jiwa)", labels: KEC, values: DISAB }],
       info: "Data penerima bantuan sosial (PKH, BPNT, DTSEN) menunggu data Dinas Sosial." },
-    { s: "ada", sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi (TPT) BPS",
+    { s: "ada", peta: 0, sumber: SUMBER_DUK + ". \"Belum/tidak bekerja\" mencakup anak, lansia, dan disabilitas — bukan angka pengangguran resmi (TPT) BPS",
       ind: [["Usia produktif 15–64 th", fmtN(167941), "jiwa"], ["Wiraswasta", fmtN(65725), "jiwa"],
             ["Pertanian / peternakan", fmtN(19905), "jiwa"], ["Belum / tidak bekerja", fmtN(70358), "termasuk anak & lansia"]],
-      grafik: [{ judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
+      grafik: [{ judul: "Penduduk usia produktif 15–64 th per kecamatan (jiwa)", labels: KEC, values: PROD },
+               { judul: "Penduduk menurut pekerjaan di KTP (jiwa)", labels: ["Belum/tidak bekerja", "Wiraswasta", "Lainnya", "Pelajar/mahasiswa", "Pertanian/peternakan", "Aparatur negara", "Nelayan", "Pensiunan", "Tenaga pengajar", "Tenaga kesehatan"],
                  values: [70358, 65725, 39710, 32594, 19905, 6063, 1739, 1128, 892, 288] }],
       info: "TPAK, TPT, dan lowongan kerja menunggu data BPS Sakernas dan Dinas Tenaga Kerja." }
   ],
